@@ -7,14 +7,15 @@ import sys
 current_dir = os.path.dirname(__file__)
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, "src"))
-sys.path.append(os.path.join(current_dir, "settings"))
 
 from router import *
 from logger import Logger
+from settings import Settings as S
 
 def application(environ, startResponse):
+	S.init(environ)
 	# we need the ability to do some logging, I think
-	Logger.init(environ, Logger.DEBUG)
+	Logger.init(environ, S.LOG_LEVEL)
 		
 	router = Router(environ)
 	try:

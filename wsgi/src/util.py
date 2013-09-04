@@ -1,6 +1,6 @@
 from cgi import parse_qs, escape
 from logger import Logger
-from settings import settings
+from settings import Settings as S
 
 import math
 import os
@@ -27,7 +27,7 @@ def is_image_file(file_name):
 	supported image file types.
 	"""
 	_, ext = os.path.splitext(file_name)
-	return ext.lstrip(".").lower() in settings.SUPPORTED_IMG_EXTENSIONS
+	return ext.lstrip(".").lower() in S.SUPPORTED_IMG_EXTENSIONS
 
 class Paginator:
 	"""
@@ -41,7 +41,7 @@ class Paginator:
 		if "page" in args:
 			self.cur_page = int(escape(args["page"][0]))
 
-		self.limit = settings.DEFAULT_PER_PAGE
+		self.limit = S.DEFAULT_PER_PAGE
 		if "limit" in args:
 			self.limit = int(escape(args["limit"][0]))
 	
@@ -118,4 +118,4 @@ class Paginator:
 		Logger.debug(self.env.get("PATH_INFO", "").lstrip("/"))
 		if page == None:
 			return None
-		return "%s/%s?page=%d" % (settings.BASE_URL, self.env.get("PATH_INFO", "").lstrip("/"), page)
+		return "%s/%s?page=%d" % (S.BASE_URL, self.env.get("PATH_INFO", "").lstrip("/"), page)

@@ -1,14 +1,12 @@
-from cgi import parse_qs, escape
 import re
-from logger import Logger
-from settings import settings
-from template import Template
 import os
-
-from util import underscore_to_camel_case
-
 import controller
 
+from cgi import parse_qs, escape
+from logger import Logger
+from settings import Settings as S
+from template import Template
+from util import underscore_to_camel_case
 from jinja2 import Environment, FileSystemLoader
 
 class Router:
@@ -20,7 +18,7 @@ class Router:
 		_, ext = os.path.splitext(path)
 		response = None
 		Logger.debug(path)
-		for regex, callback in settings.ROUTES:
+		for regex, callback in S.ROUTES:
 			Logger.debug(regex)
 			match = re.search(regex, path)
 			if match is not None:

@@ -1,5 +1,5 @@
 from logger import Logger
-from settings import settings
+from settings import Settings as S
 
 import os
 import Image
@@ -41,7 +41,7 @@ class Photo(Node):
 		thumbname = util.get_thumb_name(self._path)
 		Logger.debug("thumb name: %s" % thumbname)
 		thumb_subdir = "%dx%d" % size
-		thumb_path = os.path.join(settings.THUMBNAIL_DIR, thumb_subdir, thumbname)
+		thumb_path = os.path.join(S.THUMBNAIL_DIR, thumb_subdir, thumbname)
 		return_thumb_path = os.path.join(thumb_subdir, thumbname)
 		if os.path.exists(thumb_path):
 			return return_thumb_path
@@ -74,7 +74,7 @@ class Photo(Node):
 		"""
 		Determines whether the image has been marked for review
 		"""
-		f = open(settings.MARK_FILE)
+		f = open(S.MARK_FILE)
 		contains = False
 		if self._path in f.read():
 			contains = True
@@ -86,8 +86,8 @@ class Photo(Node):
 		return os.path.basename(self._path)
 	
 	@property
-	def rel_path(self, base_path = settings.BASE_FS_PATH):
-		return os.path.relpath(self.path, settings.BASE_FS_PATH)
+	def rel_path(self, base_path = S.BASE_FS_PATH):
+		return os.path.relpath(self.path, S.BASE_FS_PATH)
 
 	@property
 	def path(self):

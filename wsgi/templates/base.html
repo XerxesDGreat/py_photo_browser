@@ -2,7 +2,7 @@
 <html>
 	<head>
 		{% block head %}
-		<title>Photo Browser | {% block title %}{% endblock %}</title>
+		<title>{{ site_name }} | {% block title %}{% endblock %}</title>
 		{% endblock %}
 
 		<!-- begin CSS includes -->
@@ -31,7 +31,7 @@
 						<a href="{{ base_url }}/stats/">Stats</a>
 					</div>
 				</div><!-- end class.nav -->
-				<h1>{% block page_header %}Photo Browser{% endblock %}</h1>
+				<h1>{% block page_header %}{{ site_name }}{% endblock %}</h1>
 			</div><!-- end div.header -->
 			<div id="main_container">
 			{% block pagebody %}{% endblock %}

@@ -1,0 +1,12 @@
+{
+	"DATABASE": {
+		"name": "browser_dev",
+		"host": "localhost",
+		"port": "3306",
+		"user": "browser_dev_user",
+		"password": "browser_dev_pass"
+	},
+	"BASE_URL": "http://dev.browser.hobby-site.com",
+	"LOG_LEVEL": 8,
+	"SITE_NAME": "Dev Photo Browser"
+}

@@ -1,4 +1,4 @@
-from settings import settings
+from settings import Settings as S
 import MySQLdb
 from logger import Logger
 
@@ -11,7 +11,7 @@ class Database:
 		if (Database._cursor != None and Database._db != None):
 			return
 
-		cfg = settings.DATABASE
+		cfg = S.DATABASE
 		Database._db = MySQLdb.connect(
 			host=cfg['host'],
 			user=cfg['user'],

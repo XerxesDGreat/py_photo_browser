@@ -1,6 +1,6 @@
 from logger import Logger
 from template import Template
-from settings import settings
+from settings import Settings as S
 from model import Photo
 from cgi import parse_qs
 
@@ -38,7 +38,7 @@ class StatsController(BaseController):
 		stats = []
 
 		# get all the thumbnails
-		globbed_thumbs = glob.glob(os.path.join(settings.THUMBNAIL_DIR, "*"))
+		globbed_thumbs = glob.glob(os.path.join(S.THUMBNAIL_DIR, "*"))
 		stats.append(("Thumbnail count", len(globbed_thumbs), "raw"))
 
 		total_size = 0
@@ -47,13 +47,13 @@ class StatsController(BaseController):
 			total_size += os.path.getsize(f)
 		stats.append(("Thumbnail disk usage", total_size, "bytes"))
 
-		with open(settings.MARK_FILE) as f:
+		with open(S.MARK_FILE) as f:
 			for i, l in enumerate(f):
 				pass
 		stats.append(("Number of marked files", (i + 1), "raw"))
 
 		num_images = 0
-		for root, dirs, files in os.walk(settings.BASE_FS_PATH):
+		for root, dirs, files in os.walk(S.BASE_FS_PATH):
 			for f in files:
 				if util.is_image_file(f):
 					num_images += 1
@@ -67,7 +67,7 @@ class PhotoController(BaseController):
 		Performs default controller action. Basically, makes a list of files/folders.
 		"""
 		path = self._env.get('PATH_INFO', '').lstrip('/')
-		file_path = os.path.join(settings.BASE_FS_PATH, os.path.relpath(path, "photos"))
+		file_path = os.path.join(S.BASE_FS_PATH, os.path.relpath(path, "photos"))
 		if not os.path.exists(file_path):
 			return "404"
 		dir_info = []
@@ -78,7 +78,7 @@ class PhotoController(BaseController):
 				dir_info.append({
 					"path": os.path.join(current_dir, d),
 					"friendly_name": d,
-					"url": "%s/%s" % (settings.BASE_URL, os.path.join(path, d))
+					"url": "%s/%s" % (S.BASE_URL, os.path.join(path, d))
 				})
 			files.sort()
 			# optimization: alter the paginator to only construct objects for the
@@ -94,7 +94,8 @@ class PhotoController(BaseController):
 			"dirs": dir_info,
 			"paginator": p,
 			"current_path": path.rstrip("/"),
-			"path_links": self.__get_path_links(path)
+			"path_links": self.__get_path_links(path),
+			"med_thumb_size": Photo.MEDIUM_THUMB_SIZE
 		}
 		Logger.debug(str(tokens["path_links"]))
 		return Template.render("photos.html", tokens)
@@ -103,7 +104,7 @@ class PhotoController(BaseController):
 		"""
 		Renders a list of marked files
 		"""
-		f = open(settings.MARK_FILE)
+		f = open(S.MARK_FILE)
 		photos = []
 		for line in f:
 			photos.append(Photo(line.rstrip()))
@@ -126,12 +127,12 @@ class PhotoController(BaseController):
 		fname = urllib.unquote(input["file"][0])
 		mark = True if input["marked"][0] == "true" else False
 		if mark:
-			f = open(settings.MARK_FILE, "a+")
+			f = open(S.MARK_FILE, "a+")
 			f.write("%s\n" % fname)
 			f.close()
 		else:
 			rex = re.compile(r"^%s$" % fname)
-			f = open(settings.MARK_FILE)
+			f = open(S.MARK_FILE)
 			keep = []
 			Logger.debug("fname: %s" % fname)
 			i = 0
@@ -143,7 +144,7 @@ class PhotoController(BaseController):
 					keep.append(line)
 			f.close()
 			Logger.debug("total lines: %d, lines to keep: %d" % (i, len(keep)))
-			f = open(settings.MARK_FILE, "w+")
+			f = open(S.MARK_FILE, "w+")
 			f.writelines(keep)
 			f.close()
 		return json.dumps({
@@ -157,14 +158,14 @@ class PhotoController(BaseController):
 	def get_large_image(self):
 		path = os.path.relpath(self._env.get('PATH_INFO', '').lstrip('/'), "photos/big/")
 		Logger.debug(path)
-		file_path = os.path.join(settings.BASE_FS_PATH, path)
+		file_path = os.path.join(S.BASE_FS_PATH, path)
 		Logger.debug(file_path)
 		if not os.path.exists(file_path):
 			return "404"
 
 		p = Photo(file_path)
 		rel_thumb_path = p.get_or_create_thumb(Photo.MEDIUM_THUMB_SIZE)
-		f = open(os.path.join(settings.THUMBNAIL_DIR, rel_thumb_path))
+		f = open(os.path.join(S.THUMBNAIL_DIR, rel_thumb_path))
 		raw_image = f.read()
 		f.close()
 		return raw_image
