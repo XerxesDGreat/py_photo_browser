@@ -37,6 +37,9 @@ nosetests.xml
 # thumbnails
 htdocs/img/thumbs/*
 
+# local configuration
+wsgi/config/local_config.json
+
 # vim crap
 *.swp
 *.swo
