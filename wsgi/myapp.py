@@ -10,10 +10,8 @@ sys.path.append(os.path.join(current_dir, "src"))
 
 from router import *
 from logger import Logger
-from settings import Settings as S
 
 def application(environ, startResponse):
-	S.init(environ)
 	# we need the ability to do some logging, I think
 	Logger.init(environ, S.LOG_LEVEL)
 		
