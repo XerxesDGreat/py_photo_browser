@@ -15,7 +15,7 @@ Features
 a thumbnail won't be created for it
 * Dynamic larger thumbnail creation for Lightbox browsing
 * Reads files from an arbitrary directory structure and writes thumbnails to
-the htdocs/img/thumbs/<size>/ directory
+the htdocs/img/thumbs/&lt;size&gt;/ directory
 * Writes file paths of marked files to a plaintext file
 * Stats page which reports on how many thumbs have been created, how much disk
 space has been consumed by thumbnails, etc.
@@ -39,5 +39,5 @@ Roadmap
 * Database integration
 * Album creation
 * Import script which will allow moving items from an import directory into
-directories based on the date (YYYY/MM/DD/<filename>)
+directories based on the date (YYYY/MM/DD/&lt;filename&gt;)
 * Support for newly imported files to be surfaced until first seen
