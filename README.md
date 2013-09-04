@@ -27,3 +27,17 @@ Requirements
 * ExifRead [link](https://pypi.python.org/pypi/ExifRead)
 * Apache with mod\_wsgi
 * tested/developed in Python 2.7.3 on Ubuntu Linux
+
+Changeset
+---------
+
+* v0.01 Initial commit; functional web app
+
+Roadmap
+-------
+
+* Database integration
+* Album creation
+* Import script which will allow moving items from an import directory into
+directories based on the date (YYYY/MM/DD/<filename>)
+* Support for newly imported files to be surfaced until first seen
