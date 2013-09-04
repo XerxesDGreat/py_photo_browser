@@ -4,10 +4,13 @@ from cgi import parse_qs, escape
 # this is to ensure we are able to import packages and the like
 import os
 import sys
-sys.path.append(os.path.dirname(__file__))
+current_dir = os.path.dirname(__file__)
+sys.path.append(current_dir)
+sys.path.append(os.path.join(current_dir, "src"))
+sys.path.append(os.path.join(current_dir, "settings"))
 
-from lib.router import *
-from lib.logger import Logger
+from router import *
+from logger import Logger
 
 def application(environ, startResponse):
 	# we need the ability to do some logging, I think
