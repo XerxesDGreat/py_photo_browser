@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		{% block head %}
+		<title>Admin | {% block title %}{% endblock %}</title>
+		{% endblock %}
+
+		{% block css_includes %}
+		<link href="/css/style.css" type="text/css" rel="stylesheet" />
+		<link href="/css/admin.css" type="text/css" rel="stylesheet" />
+		{% endblock %} 
+	</head>
+	<body>
+		<header>
+			Admin Area
+			<nav>
+				<span>
+					<a href="/myapp/">Home</a>
+				</span>
+				<span>
+					<a href="/myapp/photos/">Photos</a>
+				</span>
+				<span>
+					<a href="/myapp/albums/">Albums</a>
+				</span>
+			</nav>
+		</header>
+		<div id="main_container">
+		{% block pagebody %}{% endblock %}
+		</div><!-- end div#main_container -->
+		<footer>
+			Footer information
+		</footer>
+	</body>
+</html>

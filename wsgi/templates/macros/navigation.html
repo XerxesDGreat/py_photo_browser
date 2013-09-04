@@ -1,0 +1,9 @@
+{% macro breadcrumbs(links, base_url, separator="|") -%}
+	{% for link in links %}
+		{% if loop.last %}
+		<span>{{ link[1] }}</span>
+		{% else %}
+		<a href="{{ base_url }}/{{ link[0] }}">{{ link[1] }}</a> {{ separator }}
+		{% endif %}
+	{% endfor %}
+{%- endmacro %}

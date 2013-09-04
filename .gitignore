@@ -33,3 +33,10 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# thumbnails
+htdocs/img/thumbs/*
+
+# vim crap
+*.swp
+*.swo

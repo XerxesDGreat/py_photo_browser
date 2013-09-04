@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+	Photos
+{% endblock %}
+
+{% block pagebody %}
+	<h1>Photo Listing</h1>
+	{% for photo in photos %}
+	<section id="photos">
+		<img src="{{ photo.url }}" title="{{ photo.title }}" style="width: 220px; height: 220px; margin: 10px;"/>
+	</section>
+	{% else %}
+		<p>Where's the f in photos?  There's no f in photos!  YOU'RE GODDAMN RIGHT!</p>
+	{% endfor %}
+{% endblock %}

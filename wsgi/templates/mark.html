@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/photos.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+<script src="{{ base_url }}/js/mark.js"></script>
+{% endblock %}
+
+{% block title %}
+{{ super() }}Marked Files
+{% endblock %}
+
+{% block page_header %}
+Marked Files
+{% endblock %}
+
+{% block pagebody %}
+		<form id="selection_form">
+			<div class="file_containers">
+				{% for d in dirs %}
+					<a href="{{ d.url }}">
+						<div class="dir">
+							<div class="icon"></div><!-- end div.icon -->
+							<div class="label">{{ d.friendly_name }}</div><!-- end div.label -->
+						</div><!-- end div.dir -->
+					</a>
+				{% endfor %}
+				{% for p in photos %}
+					<div class="file{% if p.is_checked %} marked{% endif %}" id="img_{{ loop.index }}">
+						<div class="icon">
+							<img src="{{ thumbnail_url }}/{{ p.get_or_create_thumb() }}" />
+						</div><!-- end div.thumb -->
+						<div class="label">
+							<input type="checkbox" name="delete[]" value="{{ p.path }}"{% if p.is_checked %} checked="checked"{% endif %} />
+							{{ p.name }}
+						</div><!-- end div.name -->
+					</div><!-- end div.file -->
+				{% endfor %}
+			</div><!-- end div.file_containers -->
+		</form>
+		{#
+		{% if paginator.num_pages > 1 %}
+			{% if paginator.prev_page is not none %}
+			<a href="{{ paginator.prev_page_url }}">previous</a>
+			{% endif %}
+			{% if paginator.next_page is not none %}
+			<a href="{{ paginator.next_page_url }}">next</a>
+			{% endif %}
+		{% endif %}
+		#}
+		<script type="text/javascript">
+			registerMarkAction($("#selection_form"), "input", "{{ base_url }}/mark/update");
+		</script>
+		
+{% endblock %}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		{% block head %}
+		<title>Photo Browser | {% block title %}{% endblock %}</title>
+		{% endblock %}
+
+		<!-- begin CSS includes -->
+		{% block css_includes %}
+		<link href="{{ base_url }}/css/style.css" type="text/css" rel="stylesheet" />
+		<link href='http://fonts.googleapis.com/css?family=Cabin:400,700' rel='stylesheet' type='text/css'>
+		<link href='http://fonts.googleapis.com/css?family=Ubuntu:400,700' rel='stylesheet' type='text/css'>
+		{% endblock %}
+		<!-- end CSS includes -->
+
+		<!-- begin script includes -->
+		{% block js_includes %}
+		{% endblock %}
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<div class="nav">
+					<div class="nav_button">
+						<a href="{{ base_url }}/photos/">Browse</a>
+					</div>
+					<div class="nav_button">
+						<a href="{{ base_url }}/mark/">Marked</a>
+					</div>
+					<div class="nav_button">
+						<a href="{{ base_url }}/stats/">Stats</a>
+					</div>
+				</div><!-- end class.nav -->
+				<h1>{% block page_header %}Photo Browser{% endblock %}</h1>
+			</div><!-- end div.header -->
+			<div id="main_container">
+			{% block pagebody %}{% endblock %}
+			</div><!-- end div#main_container -->
+			<div id="footer">
+				Footer information
+			</div><!-- end div.footer -->
+		</div><!-- end div.wrapper -->
+	</body>
+</html>

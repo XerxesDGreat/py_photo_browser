@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}
+New Photo
+{% endblock %}
+
+{% block pagebody %}
+<h1>
+	New Photo
+</h1>
+
+<form method="post" action="{{ baseUrl }}/admin/photos/create">
+	<div>
+		<label for="imageContent">File</label>
+		<input type="file" name="imageContent" />
+	</div>
+	-- OR --
+	<div>
+		<label for="imageUrl">Image url</label>
+		<input type="url" name="imageUrl" />
+	</div>
+
+	<div>
+		<label for="imageTitle">Title</label>
+		<input type="text" name="imageTitle" />
+	</div>
+
+	<div>
+		<label for="imageDescription">Description</label>
+		<textarea name="imageDescription"></textarea>
+	</div>
+
+	<div>
+		<button type="submit">Add Photo</button>
+	</div>
+</form>
+
+{% endblock %}

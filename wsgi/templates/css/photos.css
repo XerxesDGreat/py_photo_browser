@@ -1,0 +1,48 @@
+div.file_containers {
+	margin: 10px;
+	padding: 10px;
+}
+
+div.breadcrumbs {
+	padding: 10px;
+	margin: 10px;
+	font-weight: bold;
+}
+
+div.dir, div.file {
+	width: 200px;
+	margin: 5px;
+	padding: 4px;
+	border: 1px solid #eee;
+	display: inline-block
+}
+
+.marked {
+	background-color: #ffc;
+}
+
+div.dir div.icon {
+	background-color: #fff;
+	background-image: url("{{ img_url }}/folder_200x150.jpg");
+	background-repeat: no-repeat;
+	background-position: center center;
+}
+
+div.icon {
+	background-color: #ccc;
+	display: table-cell;
+	vertical-align: middle;
+	text-align: center;
+	height: 200px;
+	width: 200px;
+}
+
+div.label {
+	font-size: 12px;
+	padding: 7px 2px;
+}
+
+div.dir div.label {
+	font-weight: bold;
+	text-align: center;
+}

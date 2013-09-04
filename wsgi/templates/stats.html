@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ super() }}Stats
+{% endblock %}
+
+{% block page_header %}
+Stats
+{% endblock %}
+
+{% block pagebody %}
+<table style="width: 50%;">
+	<tr>
+		<th style="width: 50%;">metric</th>
+		<th style="width: 50%;">value</th>
+	</tr>
+	{% for stat in stats %}
+	<tr{{ loop.cycle(' style="background-color: #ccc;"', "") }}>
+		<td>{{ stat[0] }}</td>
+		<td style="text-align: center;">
+		{% if stat[2] == "raw" %}{{ stat[1] }}
+		{% elif stat[2] == "bytes" %}{{ stat[1]|filesizeformat }}
+		{% endif %}
+		</td>
+	</tr>
+	{% endfor %}
+</table>
+{% endblock %}

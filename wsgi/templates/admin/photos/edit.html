@@ -1,0 +1,13 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}
+	Photos
+{% endblock %}
+
+{% block pagebody %}
+	<h1>Photo Information</h1>
+	<p>{{ photo.url }}</p>
+	<p>{{ photo.id }}</p>
+	<p>{{ photo.title }}</p>
+	<p>{{ photo.caption }}</p>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "macros/navigation.html" as navigation %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/photos.css" rel="stylesheet" />
+<link href="{{ base_url }}/css/lightbox.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script src="{{ base_url }}/js/lightbox-2.6.min.js"></script>
+<script src="{{ base_url }}/js/site.js"></script>
+{% endblock %}
+
+{% block title %}
+{{ super() }}{{ current_path }}
+{% endblock %}
+
+{% block page_header %}
+Browsing Photos
+{% endblock %}
+
+{% block pagebody %}
+	<div class="breadcrumbs">
+		{{ navigation.breadcrumbs(path_links, base_url, " > ") }}
+	</div><!-- end div.ancestor_links -->
+	{% if dirs or paginator.list %}
+		<form id="selection_form">
+			<div class="file_containers">
+				{% for d in dirs %}
+					<a href="{{ d.url }}">
+						<div class="dir">
+							<div class="icon"></div><!-- end div.icon -->
+							<div class="label">{{ d.friendly_name }}</div><!-- end div.label -->
+						</div><!-- end div.dir -->
+					</a>
+				{% endfor %}
+				{% for f in paginator.page_contents %}
+					<div class="file{% if f.is_checked %} marked{% endif %}" id="container_{{ f.path }}">
+						<div class="icon">
+							<img src="{{ thumbnail_url }}/{{ f.get_or_create_thumb() }}" />
+						</div><!-- end div.thumb -->
+						<div class="labels">
+							<div class="label">{{ f.name }}</div><!-- end div.label -->
+							<div class="operations">
+								<a href="{{ base_url }}/photos/big/{{ f.rel_path }}"
+									data-lightbox="pageset"
+									class="magnify"
+									id="magnify_{{ f.path }}">magnify</a> | 
+								<a href="#" class="mark" id="mark_{{ f.path }}">
+									{% if f.is_checked %}un{% endif %}mark
+								</a>
+							</div><!-- end div.operations -->
+						</div><!-- end div.labels -->
+					</div><!-- end div.file -->
+				{% endfor %}
+			</div><!-- end div.file_containers -->
+		</form>
+		{% if paginator.num_pages > 1 %}
+			{% if paginator.prev_page is not none %}
+			<a href="{{ paginator.prev_page_url }}">previous</a>
+			{% endif %}
+			{% if paginator.next_page is not none %}
+			<a href="{{ paginator.next_page_url }}">next</a>
+			{% endif %}
+		{% endif %}
+		<script type="text/javascript">
+			registerMarkAction($("#selection_form"), "a.mark", "{{ base_url }}/mark/update");
+		</script>
+	{% endif %}
+{% endblock %}
