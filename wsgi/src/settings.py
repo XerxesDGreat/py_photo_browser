@@ -54,7 +54,7 @@ class _Settings:
 		]
 		
 		# important files
-		self._config["MARK_FILE"] = os.path.join(self.HTDOCS_DIR, "user_input", "marked_photos.txt"),
+		self._config["MARK_FILE"] = os.path.join(self.HTDOCS_DIR, "user_input", "marked_photos.txt")
 		
 		self._config["SUPPORTED_IMG_EXTENSIONS"] = [
 			"jpeg",
