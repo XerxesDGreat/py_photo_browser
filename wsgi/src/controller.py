@@ -38,14 +38,8 @@ class StatsController(BaseController):
 		stats = []
 
 		# get all the thumbnails
-		globbed_thumbs = glob.glob(os.path.join(S.THUMBNAIL_DIR, "*"))
-		stats.append(("Thumbnail count", len(globbed_thumbs), "raw"))
-
-		total_size = 0
-		for f in globbed_thumbs:
-			Logger.debug("file: %s; size: %s" % (f, str(os.path.getsize(f))))
-			total_size += os.path.getsize(f)
-		stats.append(("Thumbnail disk usage", total_size, "bytes"))
+		stats.extend(self._thumb_info(Photo.SMALL_THUMB_SIZE))
+		stats.extend(self._thumb_info(Photo.MEDIUM_THUMB_SIZE))
 
 		with open(S.MARK_FILE) as f:
 			for i, l in enumerate(f):
@@ -60,6 +54,20 @@ class StatsController(BaseController):
 		stats.append(("Number of source images", num_images, "raw"))
 
 		return Template.render("stats.html", {"stats": stats})
+	
+	def _thumb_info(self, size):
+		ret = []
+		size_string = "%sx%s" % size
+		globbed_thumbs = glob.glob(os.path.join(S.THUMBNAIL_DIR, size_string, "*"))
+		ret.append(("Thumbnail count (%s)" % size_string, len(globbed_thumbs), "raw"))
+
+		total_size = 0
+		for f in globbed_thumbs:
+			Logger.debug("file: %s; size: %s" % (f, str(os.path.getsize(f))))
+			total_size += os.path.getsize(f)
+		ret.append(("Thumbnail disk usage (%s)" % size_string, total_size, "bytes"))
+		return ret
+		
 
 class PhotoController(BaseController):
 	def default(self):
