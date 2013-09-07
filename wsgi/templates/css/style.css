@@ -39,6 +39,19 @@ div#header h1 {
 	line-height: 80px;
 }
 
+div#message {
+	width: 80%;
+	margin: 5px auto;
+	line-height: 20px;
+	height: 20px;
+	padding: 10px;
+	font-weight: bold;
+	border: 1px solid #5C7CFF;
+	color: #5C7CFF;
+	background-color: #D7DEF7;
+	text-align: center;
+}
+
 div.nav {
 	float: right;
 	height: 80px;

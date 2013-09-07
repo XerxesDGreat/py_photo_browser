@@ -10,11 +10,14 @@
 		<link href="{{ base_url }}/css/style.css" type="text/css" rel="stylesheet" />
 		<link href='http://fonts.googleapis.com/css?family=Cabin:400,700' rel='stylesheet' type='text/css'>
 		<link href='http://fonts.googleapis.com/css?family=Ubuntu:400,700' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
 		{% endblock %}
 		<!-- end CSS includes -->
 
 		<!-- begin script includes -->
 		{% block js_includes %}
+		<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+		<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
 		{% endblock %}
 	</head>
 	<body>
@@ -34,6 +37,18 @@
 				<h1>{% block page_header %}{{ site_name }}{% endblock %}</h1>
 			</div><!-- end div.header -->
 			<div id="main_container">
+			{% if message %}
+				<div id="message">{{ message }}</div><!-- end div#message -->
+				<script type="text/javascript">
+				$(document).ready(function() {
+					$("#message").show("blind", {}, 500, function() {
+						setTimeout(function() {
+							$("#message").hide("blind", {}, 500)
+						}, 3000);
+					});
+				});
+				</script>
+			{% endif %}
 			{% block pagebody %}{% endblock %}
 			</div><!-- end div#main_container -->
 			<div id="footer">
