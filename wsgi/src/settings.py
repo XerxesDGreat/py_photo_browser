@@ -45,6 +45,7 @@ class _Settings:
 		# identify various routes with callbacks which can be taken
 		self._config["ROUTES"] = [
 			(r"^css/?[_a-z]+\.css$", "css"),
+			(r"photos/single/.*$", "photo.get_one"),
 			(r"photos/big/.*$", "photo.get_large_image"),
 			(r"photos/?.*$", "photo"),
 			(r"^mark/?$", "photo.get_marked_photos"),

@@ -21,56 +21,69 @@ class Database:
 		Database._cursor = Database._db.cursor()
 
 	@staticmethod	
-	def fetchAllFromTable(tableName):
+	def fetch_all_from_table(table_name):
 		Database._init()
-		query = "SELECT * FROM " + tableName
-		return Database._doQuery(query)
+		query = "SELECT * FROM `%s`" % table_name
+		return Database._do_query(query)
 	
 	@staticmethod
-	def fetchOneById (tableName, id):
+	def fetch_one_by_id (table_name, id):
 		Database._init()
-		query = "SELECT * FROM " + tableName + " WHERE `id` = %s"
-		valueList = [id]
-		return Database._doQuery(query, valueList)
+		query = "SELECT * FROM `%s` WHERE `id` = %d" % (table_name, id)
+		return Database._do_query(query)
 
 	@staticmethod
-	def update (tableName, id, dataList):
+	def fetch_by_properties(table_name, property_dict, limit=None, offset=None):
 		Database._init()
-		query = 'UPDATE `' + tableName + '` SET '
-		l = len(dataList)
-		i = 0
-		valueList = []
-		for field, value, replType in dataList:
-			query = query + '`' + field + '` = ' + replType
-			if i <= (l - 1):
-				query = query + ' AND '
-			i += 1
-			valueList.append(value)
-		valueTuple = tuple(valueList)
+		field_value_list = []
+		for field_name, value in property_dict.iteritems():
+			field_value_list.append("`%s` = \"%s\"" % (field_name, value))
+		limit_stmt = "" if limit == None else "LIMIT=%d" % limit
+		offset_stmt = "" if offset == None else "OFFSET=%d" % offset
+		query = "SELECT * FROM `%s` WHERE %s %s %s;" % (
+			table_name,
+			" AND ".join(field_value_list),
+			limit_stmt,
+			offset_stmt
+		)
+		return Database._do_query(query)
+
+	@staticmethod
+	def update (table_name, id, data_list):
+		Database._init()
+		query = "UPDATE `%s` SET" % (table_name)
+		value_list = []
+		query_parts = []
+		for field, value, repl_type in data_list:
+			query_parts.append("`%s` = %s" % (field, repl_type))
+			value_list.append(value)
+		query = "%s %s" % (query, " AND ".join(query_parts))
+		value_tuple = tuple(value_list)
 		Logger.debug(query)
-		Logger.debug(repr(valueTuple))
 		return 'blah'
 
 	@staticmethod
-	def create (tableName, dataList):
+	def create (table_name, data_list):
 		Database._init()
-		query = 'INSERT INTO `' + tableName + '` SET '
-		valueList = []
-		fieldList = []
-		replTypeList = []
-		for field, value, replType in dataList:
-			valueList.append(value)
-			fieldList.append(field)
-			replTypeList.append(replType)
-		query = 'INSERT INTO `' + tableName + '` (`' + '`, `'.join(fieldList) + '`)'
-		query = query + ' VALUES (' + ', '.join(replTypeList) + ')'
-		valueTuple = tuple(valueList)
+		#query = 'INSERT INTO `' + table_name + '` SET '
+		value_list = []
+		field_list = []
+		repl_type_list = []
+		for field, value, repl_type in data_list:
+			value_list.append(value)
+			field_list.append(field)
+			repl_type_list.append(repl_type)
+		query = "INSERT INTO `%s` (`%s`) VALUES (%s)" % (
+			table_name,
+			"`, `".join(field_list),
+			", ".join(repl_type_list)
+		)
+		value_tuple = tuple(value_list)
 		Logger.debug(query)
-		Logger.debug(repr(valueTuple))
-		return Database._doQuery(query, [valueTuple])
+		return Database._do_query(query, [value_tuple])
 
 	@staticmethod
-	def _doQuery(query, values = [], commit = True):
+	def _do_query(query, values = [], commit = True):
 		Logger.debug(query)
 		results = []
 		try:
@@ -81,7 +94,7 @@ class Database:
 			Logger.debug(results)
 
 		except Exception, e:
-			Logger.debug("database exception caught: " + str(e))
+			Logger.debug("database exception caught: %s" % str(e))
 			Logger.error('some exception caught')
 			Database._db.rollback()
 

@@ -1,22 +1,21 @@
 from logger import Logger
 from settings import Settings as S
+from database import Database as DB
 
 import os
 import Image
 import util
 import exifread
 
-class Node:
-	def __init__(self, path):
-		self._path = path
-
-class Photo(Node):
+class Photo():
 	SMALL_THUMB_SIZE = (200, 200)
 	MEDIUM_THUMB_SIZE = (600, 600)
 
 	ORIENTATION_KEY = 0x0112;
 	STOP_TAG_NAME = "Orientation"
 	IMAGE_ORIENTATION_TAGNAME = "Image Orientation"
+
+	DB_TABLE_NAME = "photos"
 
 	ROTATION_VALUES = {
 		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][3]: 180,
@@ -27,18 +26,38 @@ class Photo(Node):
 		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][8]: 90
 	}
 
-	def get_hash(self):
-		pass
+	@staticmethod
+	def get_by_id(id):
+		row = DB.fetch_by_properties(Photo.DB_TABLE_NAME, {"id": 1})
+		Logger.debug(str(row))
+		return row
+	
+	def get_by_path(path):
+		"""
+		Fetches a list of photos from the given path, paginated as indicated
+		"""
+		full_path = os.path.join(S.BASE_FS_PATH, path)
+		
+
+	def __init__(self, path, filename):
+		self.path = path
+		self.filename = filename
+		self.id = ""
+		self.mark = ""
+		self.added = ""
+		self.modified = ""
+		self.hash = ""
+		self.dirty = False
 
 	def get_or_create_thumb(self, size = SMALL_THUMB_SIZE, path_only = False):
 		"""
 		Fetches the path to a thumbnail if it exists, else creates the thumb
 		and returns the path
 		"""
-		if not os.path.exists(self._path):
+		if not os.path.exists(self.path):
 			return None
 
-		thumbname = util.get_thumb_name(self._path)
+		thumbname = util.get_thumb_name(self.path)
 		Logger.debug("thumb name: %s" % thumbname)
 		thumb_subdir = "%dx%d" % size
 		thumb_path = os.path.join(S.THUMBNAIL_DIR, thumb_subdir, thumbname)
@@ -52,11 +71,11 @@ class Photo(Node):
 
 		# do something about orientation
 		Logger.debug("creating!!")
-		Logger.debug("opening %s" % self._path)
-		f = open(self._path)
+		Logger.debug("opening %s" % self.path)
+		f = open(self.path)
 		tags = exifread.process_file(f, stop_tag=Photo.STOP_TAG_NAME)
 		f.close()
-		f = open(self._path)
+		f = open(self.path)
 		Logger.debug(str(tags.keys()))
 		im = Image.open(f)
 		if Photo.IMAGE_ORIENTATION_TAGNAME in tags.keys():
@@ -76,14 +95,14 @@ class Photo(Node):
 		"""
 		f = open(S.MARK_FILE)
 		contains = False
-		if self._path in f.read():
+		if self.path in f.read():
 			contains = True
 		f.close()
 		return contains
 	
 	@property
 	def name(self):
-		return os.path.basename(self._path)
+		return os.path.basename(self.path)
 	
 	@property
 	def rel_path(self, base_path = S.BASE_FS_PATH):
@@ -91,12 +110,5 @@ class Photo(Node):
 
 	@property
 	def path(self):
-		return self._path
+		return self.path
 	
-class Directory(Node):
-	def get_friendly_name(self):
-		pass
-
-	def get_url(self):
-		pass
-

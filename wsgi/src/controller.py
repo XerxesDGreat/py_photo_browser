@@ -118,6 +118,15 @@ class PhotoController(BaseController):
 			photos.append(Photo(line.rstrip()))
 		f.close()
 		return Template.render("mark.html", {"photos": photos})
+	
+	def get_one(self):
+		path = self._env.get('PATH_INFO', '').lstrip('/')
+		photo_id = os.path.relpath(path, "photos/get_single")
+		# testing
+		photo_id = 1
+		a = Photo.get_by_id(photo_id)
+		return str(a)
+		
 		
 	def update_mark(self):
 		"""
