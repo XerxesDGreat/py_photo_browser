@@ -13,7 +13,7 @@ from logger import Logger
 
 def application(environ, startResponse):
 	# we need the ability to do some logging, I think
-	Logger.init(environ, S.LOG_LEVEL)
+	Logger.init(environ["wsgi.errors"], S.LOG_LEVEL)
 		
 	router = Router(environ)
 	try:

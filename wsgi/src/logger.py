@@ -19,27 +19,27 @@ class Logger:
 	@staticmethod
 	def error(msg):
 		if Logger._logLevel & Logger.ERROR:
-			Logger._log("ERROR: " + msg)
+			Logger._log("ERROR", msg)
 
 	@staticmethod
 	def warning(msg):
 		if Logger._logLevel & Logger.WARNING:
-			Logger._log("WARNING: " + msg)
+			Logger._log("WARNING", msg)
 	
 	@staticmethod
 	def notice(msg):
 		if Logger._logLevel & Logger.NOTICE:
-			Logger._log("NOTICE: " + msg)
+			Logger._log("NOTICE", msg)
 	
 	@staticmethod
 	def debug(msg):
 		if Logger._logLevel & Logger.DEBUG:
-			Logger._log("DEBUG: " + msg)
+			Logger._log("DEBUG,", msg)
 
 	@staticmethod
-	def _log(msg):
+	def _log(log_type, msg):
 		assert Logger.isInit(), "must initialize Logger before use"
-		print >> Logger._environ['wsgi.errors'], msg
+		print >> Logger._environ, "%s: %s" % (log_type, str(msg))
 	
 	@staticmethod
 	def setLogLevel(level):
