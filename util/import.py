@@ -14,7 +14,7 @@ sys.path.append(os.path.realpath(os.path.join(this_dir, "..", "wsgi")))
 from src.database import *
 from src.model import Photo
 from src.logger import Logger as L
-L.init(sys.stderr, L.DEBUG)
+L.init(sys.stderr, L.WARNING)
 
 WORKING_BASE_DIR = "."
 DEST_BASE_DIR = "/home/josh/Dropbox/Photos"
@@ -79,23 +79,29 @@ def get_time(file_name):
 	tags = exifread.process_file(f, details=False)
 	f.close()
 	file_time = None
-	try:
-		file_time = time.strptime(str(tags[DATE_FIELD]), EXIF_DATE_FORMAT)
-	except e:
-		pass
-	
-	try:
-		file_time = time.strptime(str(tags[BK_DATE_FIELD]), EXIF_DATE_FORMAT)
-	except e:
-		pass
+	if not get_options().force_date_from_path:
+		try:
+			file_time = time.strptime(str(tags[DATE_FIELD]), EXIF_DATE_FORMAT)
+		except Exception:
+			pass
+		
+		try:
+			file_time = time.strptime(str(tags[BK_DATE_FIELD]), EXIF_DATE_FORMAT)
+		except Exception:
+			pass
 
-	print "after: %s" % str(file_time)
-	if file_time == None and get_options().no_copy_nodate:
-		print "all goes"
-		mtime = os.path.getmtime(file_name)
-		ctime = os.path.getctime(file_name)
-		ts = mtime if mtime < ctime else ctime
-		file_time = time.localtime(ts)
+	if file_time == None:
+		if get_options().date_from_path or get_options().force_date_from_path:
+			dir_name, file_name = os.path.split(file_name)
+			relpath = os.path.relpath(dir_name, os.path.realpath(DEST_BASE_DIR))
+			parts = relpath.split(os.sep)
+			if len(parts) == 3:
+				file_time = time.strptime("%s-%s-%s" % (parts[0], parts[1], parts[2]), "%Y-%m-%d")
+		elif not get_options().no_copy_nodate:
+			mtime = os.path.getmtime(file_name)
+			ctime = os.path.getctime(file_name)
+			ts = mtime if mtime < ctime else ctime
+			file_time = time.localtime(ts)
 	return file_time
 
 def write(pieces):
@@ -164,6 +170,20 @@ def get_options():
 	)
 	op_group = parser.add_argument_group("Execution options", "Options to change how the script processes files")
 	op_group.add_argument(
+		"--date-from-path",
+		dest="date_from_path",
+		default=False,
+		action="store_true",
+		help="Parse the date from the directory structure (Y/m/d/filename) if no EXIF data exists. Overrides --no-copy-nodate"
+	)
+	op_group.add_argument(
+		"--force-date-from-path",
+		dest="force_date_from_path",
+		default=False,
+		action="store_true",
+		help="Force using the directory structure for the date, even if there is EXIF data"
+	)
+	op_group.add_argument(
 		"--db-only",
 		dest="db_only",
 		default=False,
@@ -203,7 +223,7 @@ def get_options():
 		dest="no_copy_nodate",
 		default=False,
 		action="store_true",
-		help="Add this to report when a file doesn't have a date in the EXIF data instead of copying"
+		help="Add this to report when a file doesn't have a date in the EXIF data instead of copying. Useless if --date-from-path is set"
 	)
 	op_group.add_argument(
 		"--no-recurse",
@@ -219,7 +239,8 @@ def main():
 	options = get_options()
 	options.exclude_types = options.exclude_types.lower().split(",")
 	set_up_logfile()
-	for src_dir, dirs, files in os.walk(options.src):
+	src = os.path.realpath(options.src)
+	for src_dir, dirs, files in os.walk(src):
 		for f in files:
 			src_fpath = os.path.join(src_dir, f)
 			out = [src_fpath]
