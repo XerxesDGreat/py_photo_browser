@@ -9,7 +9,8 @@ import argparse
 import exifread
 
 # some fun to get to the src dir
-this_dir = os.path.realpath(os.path.dirname(__file__))
+this_file = os.path.realpath(__file__)
+this_dir = os.path.dirname(this_file)
 sys.path.append(os.path.realpath(os.path.join(this_dir, "..", "wsgi")))
 from src.database import *
 from src.model import Photo
@@ -26,14 +27,14 @@ EXIF_DATE_FORMAT = "%Y:%m:%d %H:%M:%S"
 SUPPORTED_IMG_EXTENSIONS = [
 	"jpeg",
 	"jpg",
-	"mov",
-	"avi",
+	#"mov",
+	#"avi",
 	"bmp",
 	"png",
 	"gif",
 	"tiff",
-	"mp4",
-	"nef"
+	#"mp4",
+	#"nef"
 ]
 DESCRIPTION = """Transfers images from one directory to another, putting each
 image in a subdirectory corresponding to its creation date. If the image already exists in the destination, will compare the files using SHA1 and, if they have different contents, will copy using a new name based on the hash. Outputs one line for each file encountered in the format "<source_file_path> <dest_file_path> <action_taken> where resolution is in ("exists_same", "exists_different_copied", "new", "not_img"). Most common image extensions will be copied: (%s)""" % (
@@ -177,25 +178,11 @@ def get_options():
 		help="Parse the date from the directory structure (Y/m/d/filename) if no EXIF data exists. Overrides --no-copy-nodate"
 	)
 	op_group.add_argument(
-		"--force-date-from-path",
-		dest="force_date_from_path",
-		default=False,
-		action="store_true",
-		help="Force using the directory structure for the date, even if there is EXIF data"
-	)
-	op_group.add_argument(
 		"--db-only",
 		dest="db_only",
 		default=False,
 		action="store_true",
 		help="Only perform the database import; make no changes to the file system"
-	)
-	op_group.add_argument(
-		"--no-db",
-		dest="write_to_db",
-		default=True,
-		action="store_false",
-		help="Do no database processing; overrides --db-only"
 	)
 	op_group.add_argument(
 		"--dry-run",
@@ -212,6 +199,13 @@ def get_options():
 		help="Comma-separated, case insensitive, list of file types which should be excluded from copying"
 	)
 	op_group.add_argument(
+		"--force-date-from-path",
+		dest="force_date_from_path",
+		default=False,
+		action="store_true",
+		help="Force using the directory structure for the date, even if there is EXIF data"
+	)
+	op_group.add_argument(
 		"--no-copy-conflict",
 		dest="no_copy_conflict",
 		default=False,
@@ -224,6 +218,13 @@ def get_options():
 		default=False,
 		action="store_true",
 		help="Add this to report when a file doesn't have a date in the EXIF data instead of copying. Useless if --date-from-path is set"
+	)
+	op_group.add_argument(
+		"--no-db",
+		dest="write_to_db",
+		default=True,
+		action="store_false",
+		help="Do no database processing; overrides --db-only"
 	)
 	op_group.add_argument(
 		"--no-recurse",
