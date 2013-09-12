@@ -3,21 +3,18 @@ function jq( myid ) {
 }
 
 function registerMarkAction(container, element, url) {
-	container.on("click", element, {url: url}, updateChecked);
+	container.on("click", element, {url: url}, updateMarked);
 }
 
-function updateChecked(event) {
+function updateMarked(event) {
 	event.preventDefault();
 
 	var id = $(this).prop("id");
-	var parts = id.split("_");
-	parts.shift();
-	var fileName = parts.join("_");
-	var a = $(this).html().trim();
 	var mark = $(this).html() == "mark";
+	var action = mark ? "unmark" : "mark";
 	var ajaxArgs = {
 		type: "POST",
-		url: event.data.url,
+		url: event.data.url + action + "/" + id,
 		data: {
 			file: fileName,
 			marked: mark
@@ -32,8 +29,8 @@ function onSuccess(data) {
 	if (!data.success) {
 		return;
 	}
-	var photoContainer = "container_" + data.details.file;
-	var markedBlock = "mark_" + data.details.file;
+	var photoContainer = "container_" + data.details.id;
+	var markedBlock = "mark_" + data.details.id;
 	var containerElement = $(jq(photoContainer));
 	var markElement = $(jq(markedBlock));
 	if (data.details.marked == true) {

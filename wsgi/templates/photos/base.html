@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "macros/navigation.html" as navigation %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/photos.css" rel="stylesheet" />
+{% endblock %}
+
+{% block page_header %}
+Browsing Photos
+{% endblock %}
+
+{% block pagebody %}
+	<div class="head_metadata">
+		<div class="count_nav">viewing {{ start_index }} to {{ end_index }} of {{ num_photos }} photos</div>
+		{#
+		<div class="breadcrumbs">
+			{{ navigation.breadcrumbs(path_links, base_url, " > ") }}
+		</div><!-- end div.ancestor_links -->
+		#}
+	</div><!-- end div.head_metadata -->
+	<div class="file_containers">
+		{% block photo_content %}{% endblock %}
+	</div><!-- end div.file_containers -->
+{% endblock %}

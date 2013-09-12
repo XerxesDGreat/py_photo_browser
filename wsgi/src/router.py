@@ -22,17 +22,18 @@ class Router:
 			Logger.debug(regex)
 			match = re.search(regex, path)
 			if match is not None:
+				Logger.debug("matched %s" % regex)
 				self._environ['myapp.url_args'] = match.groups()
-				response = self.__success(callback, ext.lstrip("."))
+				response = self._success(callback)#, ext.lstrip("."))
 				break
 
 		if response == None:
-			response = self.__notfound()
+			response = self._notfound()
 
 		return response;
 
 	
-	def __success (self, callback, filetype):
+	def _success (self, callback):#, filetype):
 		parts = callback.split('.', 2)
 	
 		if len(parts) == 2:
@@ -46,26 +47,15 @@ class Router:
 
 		controller_name = underscore_to_camel_case(controller_str) + "Controller"
 
-		controller_obj = getattr(controller, controller_name)(self._environ)
-		output = getattr(controller_obj, action_str)()
+		controller_obj = getattr(controller, controller_name)(self._environ, RouteResponse)
+		resp = getattr(controller_obj, action_str)()
 
-		if output == None:
-			return None
-
-		filetype = filetype.lower()
 		addl_headers = []
-		if filetype == "css":
-			content_type = RouteResponse.CSS_CONTENT_TYPE
-		elif filetype == "jpeg" or filetype == "jpg":
-			content_type = "image/jpg"
-		else:
-			content_type = RouteResponse.HTML_CONTENT_TYPE 
-		Logger.debug("before adding headers")
-		headers = [("Content-type", content_type)] + addl_headers
-		Logger.debug("after logging headers")
-		return RouteResponse.ok(output, headers)
 
-	def __notfound (self):
+		headers = [("Content-type", resp["file_type"])] + addl_headers
+		return RouteResponse.ok(resp["content"], headers)
+
+	def _notfound (self):
 		return RouteResponse.missing(Template.render("404.html"))
 
 class RouteResponse:
@@ -74,6 +64,8 @@ class RouteResponse:
 
 	HTML_CONTENT_TYPE = "text/html; charset=utf8"
 	CSS_CONTENT_TYPE = "text/css; charset=utf8"
+	JPEG_CONTENT_TYPE = "image/jpg;"
+	JSON_CONTENT_TYPE = "application/json;"
 	
 	UTF_CONTENT_TYPES = [HTML_CONTENT_TYPE, CSS_CONTENT_TYPE]
 

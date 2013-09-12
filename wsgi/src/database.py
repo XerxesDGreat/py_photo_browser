@@ -21,31 +21,57 @@ class Database:
 		)
 		Database._cursor = Database._db.cursor()
 
-	@staticmethod	
-	def fetch_all_from_table(table_name):
-		Database._init()
-		query = "SELECT * FROM `%s`" % table_name
-		return Database._do_query(query)
-	
-	@staticmethod
-	def fetch_one_by_id (table_name, id):
-		Database._init()
-		query = "SELECT * FROM `%s` WHERE `id` = %d" % (table_name, id)
-		return Database._do_query(query)
+	#TODO: we can certainly consolidate a bunch of the query creating functions
 
-	@staticmethod
-	def fetch_by_properties(table_name, fields, limit=None, offset=None):
+	@staticmethod	
+	def fetch(table_name, fields=[], args=[], limit=None, offset=None):
+		"""
+		Builds a select query given the parameters. This is the most low-level
+		fetching method.
+		"""
 		Database._init()
-		limit_stmt = "" if limit == None else "LIMIT=%d" % limit
-		offset_stmt = "" if offset == None else "OFFSET=%d" % offset
-		query = "SELECT * FROM `%s` WHERE %s %s %s;" % (
+		Database._assert_valid_args(args)
+		Database._assert_valid_fields(fields)
+
+		limit_stmt = "" if limit == None else "LIMIT %d" % limit
+		offset_stmt = "" if offset == None else "OFFSET %d" % offset
+		where_stmt = ""
+		if len(args) > 0:
+			where_stmt = "WHERE %s" % " AND ".join([a.get_query_string() for a in args])
+		query = "SELECT %s FROM `%s` %s %s %s;" % (
+			", ".join([f.get_query_string() for f in fields]),
 			table_name,
-			" AND ".join([f.get_query_string() for f in fields]),
+			where_stmt,
 			limit_stmt,
 			offset_stmt
 		)
 		return Database._do_query(query)
 	
+	@staticmethod
+	def _assert_valid_args(args):
+		pass
+	
+	@staticmethod
+	def _assert_valid_fields(args):
+		pass
+		
+	@staticmethod
+	def fetch_all_from_table(table_name):
+		"""
+		Shortcut to get all fields from the requested table
+		"""
+		field = FieldArg("*")
+		return Database.fetch(table_name, fields=[field])
+	
+	@staticmethod
+	def fetch_one_by_id (table_name, id):
+		"""
+		Shortcut to get the record for id from the requested table
+		"""
+		field = FieldArg("*")
+		arg = FieldArg("id", FieldArg.CMP_EQ, id)
+		return Database.fetch(table_name, [field], [arg])
+
 	@staticmethod
 	def fetch_unique_field_values(table_name, unique_field, criteria_fields = []):
 		Database._init()
@@ -60,18 +86,20 @@ class Database:
 		return Database._do_query(query)
 
 	@staticmethod
-	def update (table_name, id, data_list):
+	def update (table_name, update_values, update_args):
 		Database._init()
-		query = "UPDATE `%s` SET" % (table_name)
-		value_list = []
-		query_parts = []
-		for field, value, repl_type in data_list:
-			query_parts.append("`%s` = %s" % (field, repl_type))
-			value_list.append(value)
-		query = "%s %s" % (query, " AND ".join(query_parts))
-		value_tuple = tuple(value_list)
+		query = "UPDATE `%s` SET %s WHERE %s" % (
+			table_name,
+			", ".join([v.get_query_string() for v in update_values]),
+			" AND ".join([a.get_query_string() for a in update_values])
+		)
 		Logger.debug(query)
-		return 'blah'
+		return Database._do_query(query)
+	
+	@staticmethod
+	def update_by_id(table_name, id, update_args):
+		id_arg = FieldArg("id", FieldArg.CMP_EQ, id)
+		Database.update(table_name, [id_arg], update_args)
 
 	@staticmethod
 	def create (table_name, data_list):
@@ -113,7 +141,7 @@ class Database:
 
 		return results
 
-class FetchFieldArg():
+class FieldArg():
 	CMP_LT = "<"
 	CMP_GT = ">"
 	CMP_LTE = "<="
@@ -126,6 +154,7 @@ class FetchFieldArg():
 	DB_OP_YEAR = "YEAR"
 	DB_OP_MONTH = "MONTH"
 	DB_OP_DAY = "DAY"
+	DB_OP_COUNT = "COUNT"
 
 	def __init__(self, field, compare_operation = None, compare_value = None, db_op = None):
 		self._field = field
@@ -134,11 +163,10 @@ class FetchFieldArg():
 		self._db_op = db_op
 
 	def get_query_string(self):
-		if self._db_op == None:
-			field_str = "`%s`" % self._field
-		else:
-			field_str = "%s(`%s`)" % (self._db_op, self._field)
-		if self._compare_operation == FetchFieldArg.CMP_BETWEEN:
+		field_str = "`%s`" % self._field if self._field != "*" else self._field
+		if self._db_op != None:
+			field_str = "%s(%s)" % (self._db_op, field_str)
+		if self._compare_operation == FieldArg.CMP_BETWEEN:
 			str = "%s BETWEEN '%s' AND '%s'" % (
 				field_str,
 				self._compare_value[0],

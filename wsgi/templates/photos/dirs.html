@@ -1,0 +1,13 @@
+{% extends "photos/base.html" %}
+
+{% block photo_content %}
+	<!-- dirs: [{{ dirs }}] year: [{{ year }}] month: [{{ month }}] -->
+	{% for d in dirs %}
+	<a href="{{ base_url }}/photos/{% if year != None %}{{ year }}/{% if month != None %}{{month}}/{% endif %}{% endif %}{{ d }}">
+		<div class="dir">
+			<div class="icon"></div><!-- end div.icon -->
+			<div class="label">{{ d }}</div><!-- end div.label -->
+		</div><!-- end div.dir -->
+	</a>
+	{% endfor %}
+{% endblock %}

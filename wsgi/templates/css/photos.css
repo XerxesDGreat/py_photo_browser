@@ -46,3 +46,10 @@ div.dir div.label {
 	font-weight: bold;
 	text-align: center;
 }
+
+div.count_nav {
+	float: right;
+}
+
+div.head_metadata {
+}

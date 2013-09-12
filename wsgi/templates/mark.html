@@ -31,12 +31,12 @@ Marked Files
 					</a>
 				{% endfor %}
 				{% for p in photos %}
-					<div class="file{% if p.is_checked %} marked{% endif %}" id="img_{{ loop.index }}">
+					<div class="file{% if p.marked %} marked{% endif %}" id="img_{{ loop.index }}">
 						<div class="icon">
 							<img src="{{ thumbnail_url }}/{{ p.get_or_create_thumb() }}" />
 						</div><!-- end div.thumb -->
 						<div class="label">
-							<input type="checkbox" name="delete[]" value="{{ p.path }}"{% if p.is_checked %} checked="checked"{% endif %} />
+							<input type="checkbox" name="delete[]" value="{{ p.path }}"{% if p.marked %} checked="checked"{% endif %} />
 							{{ p.name }}
 						</div><!-- end div.name -->
 					</div><!-- end div.file -->
