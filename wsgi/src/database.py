@@ -86,20 +86,19 @@ class Database:
 		return Database._do_query(query)
 
 	@staticmethod
-	def update (table_name, update_values, update_args):
+	def update (table_name, values_to_update, id_values):
 		Database._init()
 		query = "UPDATE `%s` SET %s WHERE %s" % (
 			table_name,
-			", ".join([v.get_query_string() for v in update_values]),
-			" AND ".join([a.get_query_string() for a in update_values])
+			", ".join([v.get_query_string() for v in values_to_update]),
+			" AND ".join([a.get_query_string() for a in id_values])
 		)
-		Logger.debug(query)
 		return Database._do_query(query)
 	
 	@staticmethod
-	def update_by_id(table_name, id, update_args):
+	def update_by_id(table_name, id, values_to_update):
 		id_arg = FieldArg("id", FieldArg.CMP_EQ, id)
-		Database.update(table_name, [id_arg], update_args)
+		Database.update(table_name, values_to_update, [id_arg])
 
 	@staticmethod
 	def create (table_name, data_list):

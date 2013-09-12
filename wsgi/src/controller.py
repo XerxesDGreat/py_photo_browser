@@ -115,18 +115,10 @@ class PhotoController(BaseController):
 		month directories in the year or days in each month) as well as actually
 		rendering photos.
 		"""
-		path = self._env.get('PATH_INFO', '').lstrip('/')
-		path = os.path.relpath(path, "photos")
-		year, month, day = path.split(os.sep)
+		year, month, day = self._get_id_from_path("").split(os.sep)
 
-		args = parse_qs(self._env.get("QUERY_STRING", ""))
-		offset = 0
-		if "page" in args:
-			offset = int(escape(args["page"][0])) - 1
-
-		limit = S.DEFAULT_PER_PAGE
-		if "limit" in args:
-			limit = int(escape(args["limit"][0]))
+		offset = self._get_from_query("page", 1) - 1
+		limit = self._get_from_query("limit", S.DEFAULT_PER_PAGE)
 
 		num_photos = Photo.get_count_by_date(year=year, month=month, day=day)
 		start_index = (offset * limit) + 1
@@ -139,9 +131,6 @@ class PhotoController(BaseController):
 		Logger.debug("num_photos_fetched: %d" % len(photos))
 		tokens = {
 			"photos": photos,
-			"year": year,
-			"month": month,
-			"day": day,
 			"offset": offset,
 			"limit": limit,
 			"start_index": start_index,
@@ -149,7 +138,7 @@ class PhotoController(BaseController):
 			"num_photos": num_photos
 		}
 		return self.construct_response(Template.render("photos/list.html", tokens))
-
+	
 	def get_large_image(self):
 		"""
 		Fetches the large image for lightboxing for the given photo id. Returns
@@ -178,55 +167,88 @@ class PhotoController(BaseController):
 		"""
 		Renders a list of marked files
 		"""
-		f = open(S.MARK_FILE)
-		photos = []
-		for line in f:
-			photos.append(Photo(line.rstrip()))
-		f.close()
-		return self.construct_response(Template.render("mark.html", {"photos": photos}))
+		offset = self._get_from_query("page", 1) - 1
+		limit = self._get_from_query("limit", S.DEFAULT_PER_PAGE)
+		photos = Photo.get_marked()
+		num_photos = len(photos) 
+		start_index = (offset * limit) + 1
+		end_index = num_photos
+		tokens = {
+			"photos": photos,
+			"offset": offset,
+			"limit": limit,
+			"start_index": start_index,
+			"end_index": end_index,
+			"num_photos": num_photos
+		}
+		return self.construct_response(Template.render("photos/mark.html", tokens))
 
 	def mark_photo(self):
 		"""
 		Wrapper for mark updating function
 		"""
-		self._update_mark(True)
+		return self._update_mark(True)
 
 	def unmark_photo(self):
 		"""
 		Wrapper for mark updating function
 		"""
-		self._update_mark(False)
+		return self._update_mark(False)
 	
-	def update_mark(self, marked):
+	def _update_mark(self, marked):
 		"""
 		Handles the AJAX calls from the app mark actions
 		"""
-		id = self._get_id_from_path("mark" if marked else "unmark")
+		post_args = parse_qs(self._env["wsgi.input"].read())
+		if "id" not in post_args:
+			Logger.debug("not in post args: %s" % str(post_args))
+			return self.construct_response(json.dumps({
+				"success": False,
+				"error": "missing args",
+				"id": None
+			}), self._route_types.JSON_CONTENT_TYPE)
+
+		post_ids = post_args["id"]
+		_, id = post_ids[0].split("_")
 		p = Photo.get_by_id(id)
 		if p == None:
-			return json.dumps({
+			Logger.debug("no photo retrieved")
+			return self.construct_response(json.dumps({
 				"success": False,
 				"error": "invalid_id",
 				"id": id
-			}, self.route_types.JSON_CONTENT_TYPE)
+			}), self._route_types.JSON_CONTENT_TYPE)
 
 		p.marked = marked
 		p.store()
-		return self.construct_response(json.dumps({
+		a = self.construct_response(json.dumps({
 				"success": True,
 				"details": {
 					"marked": p.marked,
 					"id": id
 				}
-			}), self.route_types.JSON_CONTENT_TYPE)
+			}), self._route_types.JSON_CONTENT_TYPE)
+		Logger.debug(a)
+		return a
 	
 	def _get_id_from_path(self, command):
 		"""
-		Fetches the 
+		Fetches the identifying info from the given path 
 		"""
 		path = self._env.get('PATH_INFO', '').lstrip('/')
 		return os.path.relpath(path, "photos/%s" % command)
-	
+
+	def _get_from_query(self, key, default=None):
+		"""
+		Fetches key from the query values, GET overriding POST
+		"""
+		get = parse_qs(self._env.get("QUERY_STRING", ""))
+		if key in get:
+			return get[key]
+		post = parse_qs(self._env["wsgi.input"].read())
+		if key in post:
+			return post[key]
+		return default
 	
 	def _get_path_links(self, path):
 		"""

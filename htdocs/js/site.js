@@ -10,14 +10,13 @@ function updateMarked(event) {
 	event.preventDefault();
 
 	var id = $(this).prop("id");
-	var mark = $(this).html() == "mark";
-	var action = mark ? "unmark" : "mark";
+	var do_mark = $(this).data("marked") == "0";
+	var action = do_mark ? "mark" : "unmark";
 	var ajaxArgs = {
 		type: "POST",
-		url: event.data.url + action + "/" + id,
+		url: event.data.url + action,
 		data: {
-			file: fileName,
-			marked: mark
+			id: id
 		},
 		success: onSuccess,
 		dataType: "json"
@@ -33,6 +32,7 @@ function onSuccess(data) {
 	var markedBlock = "mark_" + data.details.id;
 	var containerElement = $(jq(photoContainer));
 	var markElement = $(jq(markedBlock));
+	markElement.data("marked", data.details.marked)
 	if (data.details.marked == true) {
 		markElement.html("unmark");
 		containerElement.addClass("marked");

@@ -10,7 +10,7 @@ import exifread
 import datetime
 import time
 
-class Photo():
+class Photo(object):
 	SMALL_THUMB_SIZE = (200, 200)
 	MEDIUM_THUMB_SIZE = (600, 600)
 
@@ -39,15 +39,15 @@ class Photo():
 		"""
 		Determines whether the image has been marked for review
 		"""
-		return self.marked == 1
+		return self._marked
 	
 	@marked.setter
 	def marked(self, marked):
 		"""
 		Updates the checked/marked state
 		"""
-		self.marked = 1 if checked else 0
-		self.dirty.append("mark")
+		self._marked = int(marked)
+		self.dirty.append("marked")
 	
 	@property
 	def thumb_url(self):
@@ -87,7 +87,7 @@ class Photo():
 		"""
 		Fetches a single photo by id
 		"""
-		row = DB.fetch_by_id(Photo.DB_TABLE_NAME, id)
+		row = DB.fetch_one_by_id(Photo.DB_TABLE_NAME, id)
 		p = Photo(Photo.GUARD, row[0])
 		return p
 	
@@ -128,6 +128,14 @@ class Photo():
 		for i in range(0, len(rows)):
 			resp.append(Photo(Photo.GUARD, rows[i]))
 		return resp
+	
+	@staticmethod
+	def get_marked(offset=None, limit=None):
+		field = FieldArg("*")
+		criteria = [FieldArg("marked", FieldArg.CMP_EQ, 1)]
+		rows = DB.fetch(Photo.DB_TABLE_NAME, fields=[field], args=criteria,
+			limit=limit, offset=offset)
+		return [Photo(Photo.GUARD, r) for r in rows]
 
 	@staticmethod
 	def get_all_dates(year=None, month=None):
@@ -189,7 +197,7 @@ class Photo():
 		"""
 		if guard != Photo.GUARD:
 			raise Exception("Must only call __init__ from the accessor methods in Photo")
-		self.id, self.filename, self.path, self.added, self.modified, self.image_date, self.hash, self.marked = db_row
+		self.id, self.filename, self.path, self.added, self.modified, self.image_date, self.hash, self._marked = db_row
 		self.dirty = []
 	
 	def get_thumb_image_name(self):
@@ -233,7 +241,7 @@ class Photo():
 		if len(self.dirty) < 1:
 			return
 		
-		Database.update(Photo.DB_TABLE_NAME, self.id, self._get_db_tuples)
+		DB.update_by_id(Photo.DB_TABLE_NAME, self.id, self._get_db_tuples())
 		self.dirty[:] = []
 	
 	def _get_db_tuples(self):

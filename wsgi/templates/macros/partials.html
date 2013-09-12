@@ -10,9 +10,10 @@
 				data-lightbox="pageset"
 				class="magnify"
 				id="magnify_{{ photo.id }}">magnify</a> | 
-			<a href="#" class="mark" id="mark_{{ photo.id }}">
-				{% if photo.marked %}un{% endif %}mark
-			</a>
+			<a href="#"
+				data-marked="{{ photo.marked }}"
+				class="mark"
+				id="mark_{{ photo.id }}">{% if photo.marked %}un{% endif %}mark</a>
 		</div><!-- end div.operations -->
 	</div><!-- end div.labels -->
 </div><!-- end div.file -->

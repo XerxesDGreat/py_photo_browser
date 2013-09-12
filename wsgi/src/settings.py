@@ -45,12 +45,13 @@ class _Settings:
 		# identify various routes with callbacks which can be taken
 		self._config["ROUTES"] = [
 			(r"^css/?[_a-z]+\.css$", "css"),
-			(r"photos/single/.*$", "photo.get_one"),
-			(r"photos/big/.*$", "photo.get_large_image"),
-			(r"photos/[0-9]{4}/(0[0-9]|1[0-2])/([0-2][0-9]|3[0-1])/?$", "photo.get_photos_from_date"),
-			(r"photos/?([0-9]{4}/?((0[0-9]|1[0-2])/?)?)?$", "photo.get_dirs_from_date"),
-			(r"^mark/?$", "photo.get_marked_photos"),
-			(r"^mark/update/?$", "photo.update_mark"),
+			(r"^photos/single/.*$", "photo.get_one"),
+			(r"^photos/big/.*$", "photo.get_large_image"),
+			(r"^photos/[0-9]{4}/(0[0-9]|1[0-2])/([0-2][0-9]|3[0-1])/?$", "photo.get_photos_from_date"),
+			(r"^photos/?([0-9]{4}/?((0[0-9]|1[0-2])/?)?)?$", "photo.get_dirs_from_date"),
+			(r"^marked/?$", "photo.get_marked_photos"),
+			(r"^photos/mark/?$", "photo.mark_photo"),
+			(r"^photos/unmark/?$", "photo.unmark_photo"),
 			(r"^stats/?$", "stats"),
 			(r"^/?$", "index")
 		]

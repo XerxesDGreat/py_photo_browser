@@ -15,6 +15,10 @@
 {{ super() }}
 {% endblock %}
 
+{% block page_header %}
+Marked Files
+{% endblock %}
+
 {% block photo_content %}
 	{% if photos %}
 		{% for photos in photos %}
