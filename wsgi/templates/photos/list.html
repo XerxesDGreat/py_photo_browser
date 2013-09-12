@@ -17,27 +17,11 @@
 
 {% block photo_content %}
 	{% if photos %}
-		{% for f in photos %}
-			<div class="file{% if f.marked %} marked{% endif %}" id="container_{{ f.id }}">
-				<div class="icon">
-					<img src="{{ thumbnail_url }}/{{ f.thumb_url }}" />
-				</div><!-- end div.thumb -->
-				<div class="labels">
-					<div class="label">{{ f.filename }}</div><!-- end div.label -->
-					<div class="operations">
-						<a href="{{ base_url }}/photos/big/{{ f.id }}"
-							data-lightbox="pageset"
-							class="magnify"
-							id="magnify_{{ f.id }}">magnify</a> | 
-						<a href="#" class="mark" id="mark_{{ f.id }}">
-							{% if f.marked %}un{% endif %}mark
-						</a>
-					</div><!-- end div.operations -->
-				</div><!-- end div.labels -->
-			</div><!-- end div.file -->
+		{% for photos in photos %}
+			{{ partials.photo_card(photos) }}
 		{% endfor %}
 		<script type="text/javascript">
-			registerMarkAction($("#selection_form"), "a.mark", "{{ base_url }}/mark/");
+			registerMarkAction($("#file_container"), "a.mark", "{{ base_url }}/photos/");
 		</script>
 	{% endif %}
 {% endblock %}

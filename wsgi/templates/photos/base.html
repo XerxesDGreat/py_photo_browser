@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "macros/navigation.html" as navigation %}
+{% import "macros/partials.html" as partials with context %}
 
 {% block css_includes %}
 {{ super() }}
@@ -19,7 +20,7 @@ Browsing Photos
 		</div><!-- end div.ancestor_links -->
 		#}
 	</div><!-- end div.head_metadata -->
-	<div class="file_containers">
+	<div id="file_container" class="file_containers">
 		{% block photo_content %}{% endblock %}
 	</div><!-- end div.file_containers -->
 {% endblock %}

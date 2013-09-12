@@ -1,0 +1,19 @@
+{% macro photo_card(photo) -%}
+<div class="file{% if photo.marked %} marked{% endif %}" id="container_{{ photo.id }}">
+	<div class="icon">
+		<img src="{{ thumbnail_url }}/{{ photo.thumb_url }}" />
+	</div><!-- end div.thumb -->
+	<div class="labels">
+		<div class="label">{{ photo.filename }}</div><!-- end div.label -->
+		<div class="operations">
+			<a href="{{ base_url }}/photos/big/{{ photo.id }}"
+				data-lightbox="pageset"
+				class="magnify"
+				id="magnify_{{ photo.id }}">magnify</a> | 
+			<a href="#" class="mark" id="mark_{{ photo.id }}">
+				{% if photo.marked %}un{% endif %}mark
+			</a>
+		</div><!-- end div.operations -->
+	</div><!-- end div.labels -->
+</div><!-- end div.file -->
+{%- endmacro %}
