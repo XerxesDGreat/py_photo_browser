@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 
+{% block css_includes %}
+{{ super() }}
+<style type="text/css">
+	table {
+		width: 50%;
+		border: 2px solid #000;
+		border-collapse: collapse;
+	}
+	td, th {
+		text-align: center;
+		padding: 3px;
+		border: 1px solid #000;
+	}
+	td.key {
+		text-align: left;
+	}
+	th {
+		border: 2px solid #000;
+		background-color: #ccc;
+	}
+	tr.section_header {
+		border: 2px solid #000;
+		font-weight: bold;
+	}
+	tr.odd {
+		background-color: #ffc;
+	}
+</style>
+{% endblock %}
+
 {% block title %}
 {{ super() }}Stats
 {% endblock %}
@@ -9,20 +39,25 @@ Stats
 {% endblock %}
 
 {% block pagebody %}
-<table style="width: 50%;">
+<table>
 	<tr>
-		<th style="width: 50%;">metric</th>
-		<th style="width: 50%;">value</th>
+		<th style="width: 60%">metric</th>
+		<th style="width: 40%">value</th>
 	</tr>
-	{% for stat in stats %}
-	<tr{{ loop.cycle(' style="background-color: #ccc;"', "") }}>
-		<td>{{ stat[0] }}</td>
-		<td style="text-align: center;">
+	{% for section_name, section_stats in stats.iteritems() %}
+	<tr class="section_header">
+		<td colspan="2">{{ section_name }}</td>
+	</tr>
+	{% for stat in section_stats %}
+	<tr{{ loop.cycle(' class="odd"', "") }}>
+		<td class="key">{{ stat[0] }}</td>
+		<td>
 		{% if stat[2] == "raw" %}{{ stat[1] }}
 		{% elif stat[2] == "bytes" %}{{ stat[1]|filesizeformat }}
 		{% endif %}
 		</td>
 	</tr>
+	{% endfor %}
 	{% endfor %}
 </table>
 {% endblock %}

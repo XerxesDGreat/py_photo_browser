@@ -81,6 +81,16 @@ class Photo(object):
 				
 		row = DB.fetch(Photo.DB_TABLE_NAME, [count_field], query_args)
 		return int(row[0][0])
+	
+	@staticmethod
+	def get_num_marked_photos():
+		"""
+		Fetches the number of photos which are marked
+		"""
+		count_field = FieldArg("*", None, None, FieldArg.DB_OP_COUNT)
+		query_args = FieldArg("marked", FieldArg.CMP_EQ, 1)
+		row = DB.fetch(Photo.DB_TABLE_NAME, [count_field], [query_args])
+		return int(row[0][0])
 
 	@staticmethod
 	def get_by_id(id):

@@ -41,24 +41,31 @@ class IndexController(BaseController):
 
 class StatsController(BaseController):
 	def default(self):
-		stats = []
+		stats = {}
 
 		# get all the thumbnails
-		stats.extend(self._thumb_info(Photo.SMALL_THUMB_SIZE))
-		stats.extend(self._thumb_info(Photo.MEDIUM_THUMB_SIZE))
+		stats["Database stats"] = [
+			("Number of marked files", Photo.get_num_marked_photos(), "raw"),
+			("Number of DB files", Photo.get_count_by_date(), "raw")
+		]
 
-		with open(S.MARK_FILE) as f:
-			for i, l in enumerate(f):
-				pass
-		stats.append(("Number of marked files", (i + 1), "raw"))
-
+		stats["File System stats"] = []
+		for s in [Photo.SMALL_THUMB_SIZE, Photo.MEDIUM_THUMB_SIZE]:
+			stats["File System stats"].extend(self._thumb_info(s))
+			
 		num_images = 0
+		total_size = 0
 		for root, dirs, files in os.walk(S.BASE_FS_PATH):
 			for f in files:
 				if util.is_image_file(f):
 					num_images += 1
-		stats.append(("Number of source images", num_images, "raw"))
+					total_size += os.path.getsize(os.path.join(root, f))
+		stats["File System stats"].extend([
+			("Number of source images", num_images, "raw"),
+			("Disk space", total_size, "bytes")
+		])
 
+		Logger.debug(str(stats.keys()))
 		return self.construct_response(Template.render("stats.html", {"stats": stats}))
 	
 	def _thumb_info(self, size):
