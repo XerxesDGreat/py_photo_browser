@@ -201,7 +201,7 @@ class Photo(object):
 		"""
 		Gets the file name for a thumbnail (<basename>.<hash>.<ext>)
 		"""
-		return Util.get_thumb_name(self.filename, self.hash)
+		return util.get_thumb_name(self.filename, self.hash)
 
 	def get_or_create_thumb(self, size = SMALL_THUMB_SIZE, path_only = False):
 		"""
@@ -219,7 +219,7 @@ class Photo(object):
 		if path_only:
 			return return_thumb_path 
 
-		Util.create_thumb(self.filepath, thumb_path, size)
+		util.create_thumb(self.filepath, thumb_path, size)
 		return return_thumb_path 
 
 	def store(self):

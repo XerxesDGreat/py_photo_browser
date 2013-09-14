@@ -10,10 +10,9 @@ div.breadcrumbs {
 }
 
 div.dir, div.file {
-	width: 200px;
 	margin: 5px;
 	padding: 4px;
-	border: 1px solid #eee;
+	border: 1px solid #ccc;
 	display: inline-block
 }
 
@@ -29,17 +28,22 @@ div.dir div.icon {
 }
 
 div.icon {
-	background-color: #ccc;
+	background-color: #eee;
 	display: table-cell;
 	vertical-align: middle;
 	text-align: center;
 	height: 200px;
 	width: 200px;
+	padding: 5px;
 }
 
 div.label {
 	font-size: 12px;
 	padding: 7px 2px;
+}
+
+div.operations {
+	text-align: center;
 }
 
 div.dir div.label {
