@@ -5,6 +5,21 @@ from settings import Settings as S
 import math
 import os
 import hashlib
+import exifread
+import Image
+
+IMAGE_ORIENTATION_TAGNAME = "Image Orientation"
+STOP_TAG_NAME = "Orientation"
+ORIENTATION_KEY = 0x0112;
+
+ROTATION_VALUES = {
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][3]: 180,
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][4]: 180,
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][5]: 270,
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][6]: 270,
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][7]: 90,
+	exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][8]: 90
+}
 
 def underscore_to_camel_case (str):
 	return str.title().replace('_', '')
@@ -16,10 +31,23 @@ def make_file_hash(path):
 	f.close()
 	return h.hexdigest()
 
-def get_thumb_name(path):
-	dirname, filename = os.path.split(path)
-	filebase, ext = os.path.splitext(filename)
-	return "%s.%s.%s" % (filebase, make_file_hash(path), ext.lstrip(".").lower())
+def get_thumb_name(filename, hash):
+	filebase, ext = filename.split(".")
+	return ".".join([filebase, hash, ext.lstrip(".").lower()])
+
+def create_thumb(src_path, target_path, size):
+	f = open(src_path) 
+	tags = exifread.process_file(f, stop_tag=STOP_TAG_NAME)
+	f.seek(0)
+	im = Image.open(f)
+	if IMAGE_ORIENTATION_TAGNAME in tags.keys():
+		img_orientation = tags[IMAGE_ORIENTATION_TAGNAME]
+		if str(img_orientation) in ROTATION_VALUES:
+			im = im.rotate(ROTATION_VALUES[str(img_orientation)])
+	im.thumbnail(size, Image.ANTIALIAS)
+	im.save(target_path)
+	f.close()
+
 
 def is_image_file(file_name):
 	"""

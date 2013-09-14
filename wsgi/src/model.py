@@ -4,7 +4,6 @@ from database import Database as DB
 from database import FieldArg
 
 import os
-import Image
 import util
 import exifread
 import datetime
@@ -14,20 +13,8 @@ class Photo(object):
 	SMALL_THUMB_SIZE = (200, 200)
 	MEDIUM_THUMB_SIZE = (600, 600)
 
-	ORIENTATION_KEY = 0x0112;
-	STOP_TAG_NAME = "Orientation"
-	IMAGE_ORIENTATION_TAGNAME = "Image Orientation"
-
 	DB_TABLE_NAME = "photos"
 
-	ROTATION_VALUES = {
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][3]: 180,
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][4]: 180,
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][5]: 270,
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][6]: 270,
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][7]: 90,
-		exifread.tags.EXIF_TAGS[ORIENTATION_KEY][1][8]: 90
-	}
 
 	GUARD = {}
 
@@ -214,8 +201,7 @@ class Photo(object):
 		"""
 		Gets the file name for a thumbnail (<basename>.<hash>.<ext>)
 		"""
-		filename, ext = self.filename.split(".")
-		return ".".join([filename, self.hash, ext.lstrip(".").lower()])
+		return Util.get_thumb_name(self.filename, self.hash)
 
 	def get_or_create_thumb(self, size = SMALL_THUMB_SIZE, path_only = False):
 		"""
@@ -233,18 +219,7 @@ class Photo(object):
 		if path_only:
 			return return_thumb_path 
 
-		# do something about orientation
-		f = open(self.filepath) 
-		tags = exifread.process_file(f, stop_tag=Photo.STOP_TAG_NAME)
-		f.seek(0)
-		im = Image.open(f)
-		if Photo.IMAGE_ORIENTATION_TAGNAME in tags.keys():
-			img_orientation = tags[Photo.IMAGE_ORIENTATION_TAGNAME]
-			if str(img_orientation) in Photo.ROTATION_VALUES:
-				im = im.rotate(Photo.ROTATION_VALUES[str(img_orientation)])
-		im.thumbnail(size, Image.ANTIALIAS)
-		im.save(thumb_path)
-		f.close()
+		Util.create_thumb(self.filepath, thumb_path, size)
 		return return_thumb_path 
 
 	def store(self):

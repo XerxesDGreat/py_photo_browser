@@ -7,6 +7,7 @@ import shutil
 import hashlib
 import argparse
 import exifread
+import Image
 
 # some fun to get to the src dir
 this_file = os.path.realpath(__file__)
@@ -15,6 +16,8 @@ sys.path.append(os.path.realpath(os.path.join(this_dir, "..", "wsgi")))
 from src.database import *
 from src.model import Photo
 from src.logger import Logger as L
+import src.util
+from src.settings import Settings as S
 L.init(sys.stderr, L.WARNING)
 
 WORKING_BASE_DIR = "."
@@ -49,11 +52,12 @@ def is_img_file(file_name, options):
 
 def is_in_database(file_basename, hash, created_date):
 	db_args = []
-	db_args.append(FetchFieldArg("filename", FetchFieldArg.CMP_EQ, file_basename))
+	db_args.append(FieldArg("filename", FieldArg.CMP_EQ, file_basename))
 	c = time.strftime(Database.DB_DATE_FORMAT, created_date)
-	db_args.append(FetchFieldArg("image_date", FetchFieldArg.CMP_EQ, c))
-	db_args.append(FetchFieldArg("hash", FetchFieldArg.CMP_EQ, hash))
-	rows = Database.fetch_by_properties(Photo.DB_TABLE_NAME, db_args)
+	db_args.append(FieldArg("image_date", FieldArg.CMP_EQ, c))
+	db_args.append(FieldArg("hash", FieldArg.CMP_EQ, hash))
+	fetch_field = FieldArg("*")
+	rows = Database.fetch(Photo.DB_TABLE_NAME, [fetch_field], db_args)
 	return len(rows) > 0
 
 def get_hash(file_name):
@@ -74,6 +78,17 @@ def create_dir(created_date):
 			os.mkdir(pic_dir)
 		i += 1
 	return pic_dir
+
+def create_thumbs(file_path, hash):
+	path, filename = os.path.split(file_path)
+	thumb_name = src.util.get_thumb_name(filename, hash)
+	for s in [Photo.SMALL_THUMB_SIZE, Photo.MEDIUM_THUMB_SIZE]:
+		create_single_thumb(s, file_path, thumb_name)
+
+def create_single_thumb(size, src_path, thumb_name):
+	thumbnail_dir = S.THUMBNAIL_DIR
+	target = os.path.join(thumbnail_dir, "%sx%s" % size, thumb_name)
+	src.util.create_thumb(src_path, target, size)
 
 def get_time(file_name):
 	f = open(file_name)
@@ -233,6 +248,13 @@ def get_options():
 		action="store_false",
 		help="Disallow directory recursion when looking for images"
 	)
+	op_group.add_argument(
+		"--no-thumbs",
+		dest="thumbs",
+		default=True,
+		action="store_false",
+		help="Prevent script from creating thumbnails"
+	)
 	options = parser.parse_args()
 	return options
 
@@ -298,6 +320,8 @@ def main():
 					out.append("created_id[%d]" % p.id)
 				else:
 					out.append("not_created_no_db")
+				if options.thumbs:
+					create_thumbs(src_fpath, src_hash)
 			write(out)
 					
 		if options.recurse == False:
