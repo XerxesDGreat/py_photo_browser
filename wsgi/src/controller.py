@@ -40,7 +40,13 @@ class IndexController(BaseController):
 		return self.construct_response(Template.render("index.html"))
 
 class StatsController(BaseController):
+	"""
+	Controller for creating a report of usage and count statistics
+	"""
 	def default(self):
+		"""
+		Default action fetches all the stats and renders a template using them
+		"""
 		stats = {}
 
 		# get all the thumbnails
@@ -69,6 +75,9 @@ class StatsController(BaseController):
 		return self.construct_response(Template.render("stats.html", {"stats": stats}))
 	
 	def _thumb_info(self, size):
+		"""
+		Fetches information about a particular size of thumbnails
+		"""
 		ret = []
 		size_string = "%sx%s" % size
 		globbed_thumbs = glob.glob(os.path.join(S.THUMBNAIL_DIR, size_string, "*"))
@@ -83,6 +92,10 @@ class StatsController(BaseController):
 		
 
 class PhotoController(BaseController):
+	"""
+	Controller for fetching, assembling, and causing to be rendered requests
+	which have to do with displaying and updating photos
+	"""
 	def get_dirs_from_date(self):
 		"""
 		Renders a list of all the year "folders" in the system.
@@ -257,46 +270,14 @@ class PhotoController(BaseController):
 			return post[key]
 		return default
 	
-	def _get_path_links(self, path):
-		"""
-		Fetches a list of path links for the provided path.
-
-		This is currently hardcoded, which is not ideal.
-		"""
-		link_set = []
-		cur_link = os.path.join("/")
-		#rel_path = os.path.relpath(path, "photos")
-		path_parts = path.split("/")
-		for p in path_parts:
-			if p in ("", "."):
-				continue
-			cur_link = os.path.join(cur_link, p)
-			link_set.append((urllib.quote(cur_link), p))
-		return link_set
-	
-	def _get_photos_from_dir(self, path):
-		dir_info = []
-		p = None
-		for current_dir, dirs, files in os.walk(file_path):
-			for d in dirs:
-				dir_info.append({
-					"path": os.path.join(current_dir, d),
-					"friendly_name": d,
-					"url": "%s/%s" % (S.BASE_URL, os.path.join(path, d))
-				})
-			files.sort()
-			# optimization: alter the paginator to only construct objects for the
-			# items which end up on the indicated page, possibly by passing in
-			# a pointer to the constructor of Photo
-			for f in files:
-				if not util.is_image_file(f):
-					continue
-				all_file_info.append(Photo(os.path.join(current_dir, f)))
-			p = util.Paginator(self._env, all_file_info)
-			break
-		return (dir_info, p)
-	
 class CssController(BaseController):
+	"""
+	Controller for rendering css templates since I want to be able to use tokens
+	in the css documents
+	"""
 	def default(self):
+		"""
+		Performs all rendering actions
+		"""
 		path = os.path.join("css",os.path.relpath(self._env.get("PATH_INFO"), "css"))
 		return self.construct_response(Template.render(path), self._route_types.CSS_CONTENT_TYPE)
