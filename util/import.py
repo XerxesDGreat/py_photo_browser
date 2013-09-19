@@ -44,6 +44,19 @@ image in a subdirectory corresponding to its creation date. If the image already
 	", ".join(SUPPORTED_IMG_EXTENSIONS)
 )
 
+class FileContainer(object):
+	def __init__(self, file_path):
+		self.file_path = file_path
+		self.file_handle = open(file_path)
+		self.tags = exifread.process_file(self.file_handle, details=False)
+		self.file_handle.seek(0)
+		self.hash = src.util.make_file_hash(self.file_path)
+	
+	def destroy(self):
+		self.file_handle.close()
+		self.tags = None
+		self.file_path = None
+	
 
 def is_img_file(file_name, options):
 	_, ext = os.path.splitext(file_name)
@@ -79,46 +92,75 @@ def create_dir(created_date):
 		i += 1
 	return pic_dir
 
-def create_thumbs(file_path, hash):
-	path, filename = os.path.split(file_path)
-	thumb_name = src.util.get_thumb_name(filename, hash)
+def create_thumbs(fc):
+	path, filename = os.path.split(fc.file_path)
+	thumb_name = src.util.get_thumb_name(filename, fc.hash)
 	for s in [Photo.SMALL_THUMB_SIZE, Photo.MEDIUM_THUMB_SIZE]:
-		create_single_thumb(s, file_path, thumb_name)
+		create_single_thumb(s, fc, thumb_name)
 
-def create_single_thumb(size, src_path, thumb_name):
+def create_single_thumb(size, fc, thumb_name):
 	thumbnail_dir = S.THUMBNAIL_DIR
 	target = os.path.join(thumbnail_dir, "%sx%s" % size, thumb_name)
-	src.util.create_thumb(src_path, target, size)
+	if os.path.exists(target):
+		return
+	src.util.create_thumb(fc.file_handle, fc.tags, target, size)
 
-def get_time(file_name):
-	f = open(file_name)
-	tags = exifread.process_file(f, details=False)
-	f.close()
-	file_time = None
-	if not get_options().force_date_from_path:
-		try:
-			file_time = time.strptime(str(tags[DATE_FIELD]), EXIF_DATE_FORMAT)
-		except Exception:
-			pass
-		
-		try:
-			file_time = time.strptime(str(tags[BK_DATE_FIELD]), EXIF_DATE_FORMAT)
-		except Exception:
-			pass
+def get_time(fc):
+	retval = {
+		"time": None,
+		"msg": "no_date"
+	}
+	file_name = fc.file_path
+	dir_name, file_name = os.path.split(file_name)
+	relpath = os.path.relpath(dir_name, os.path.realpath(DEST_BASE_DIR))
+	parts = relpath.split(os.sep)
+	try:
+		year = int(parts[0]) if len(parts) > 0 else None
+		month = int(parts[1]) if len(parts) > 1 else None
+		day = int(parts[2]) if len(parts) > 2 else None
+	except Exception:
+		year = month = day = None
 
-	if file_time == None:
-		if get_options().date_from_path or get_options().force_date_from_path:
-			dir_name, file_name = os.path.split(file_name)
-			relpath = os.path.relpath(dir_name, os.path.realpath(DEST_BASE_DIR))
-			parts = relpath.split(os.sep)
-			if len(parts) == 3:
-				file_time = time.strptime("%s-%s-%s" % (parts[0], parts[1], parts[2]), "%Y-%m-%d")
-		elif not get_options().no_copy_nodate:
-			mtime = os.path.getmtime(file_name)
-			ctime = os.path.getctime(file_name)
-			ts = mtime if mtime < ctime else ctime
-			file_time = time.localtime(ts)
-	return file_time
+	# force date supercedes all
+	if get_options().force_date_from_path:
+		if year == None or month == None or day == None:
+			return retval
+		return time.strptime("%s-%s-%s" % (year, month, day), "%Y-%m-%d")
+	
+	exif_time = None
+	try:
+		exif_time = time.strptime(str(fc.tags[DATE_FIELD]), EXIF_DATE_FORMAT)
+	except Exception:
+		pass
+	
+	try:
+		exif_time = time.strptime(str(fc.tags[BK_DATE_FIELD]), EXIF_DATE_FORMAT)
+	except Exception:
+		pass
+	
+	get_date_from_path = False
+	if (exif_time == None):
+		retval["msg"] = "no_exif_date"
+		get_date_from_path = True
+	
+	elif (exif_time.tm_year != year or exif_time.tm_mon != month
+		or exif_time.tm_mday != day):
+		retval["msg"] = "no_date_match[%s-%s-%s]" % (
+			exif_time.tm_year,
+			exif_time.tm_mon,
+			exif_time.tm_mday
+		)
+		get_date_from_path = True
+	
+	else:
+		retval["msg"] = "date_from_exif"
+		retval["time"] = exif_time
+	
+	if get_date_from_path:
+		if (year != None and month != None and day != None):
+			retval["time"] = time.strptime("%s-%s-%s" % (year, month, day), "%Y-%m-%d")
+
+	return retval
 
 def write(pieces):
 	global logfile
@@ -186,13 +228,6 @@ def get_options():
 	)
 	op_group = parser.add_argument_group("Execution options", "Options to change how the script processes files")
 	op_group.add_argument(
-		"--date-from-path",
-		dest="date_from_path",
-		default=False,
-		action="store_true",
-		help="Parse the date from the directory structure (Y/m/d/filename) if no EXIF data exists. Overrides --no-copy-nodate"
-	)
-	op_group.add_argument(
 		"--db-only",
 		dest="db_only",
 		default=False,
@@ -228,13 +263,6 @@ def get_options():
 		help="Add this to report file conflicts instead of copy using a different filename."
 	)
 	op_group.add_argument(
-		"--no-copy-nodate",
-		dest="no_copy_nodate",
-		default=False,
-		action="store_true",
-		help="Add this to report when a file doesn't have a date in the EXIF data instead of copying. Useless if --date-from-path is set"
-	)
-	op_group.add_argument(
 		"--no-db",
 		dest="write_to_db",
 		default=True,
@@ -267,24 +295,32 @@ def main():
 		for f in files:
 			src_fpath = os.path.join(src_dir, f)
 			out = [src_fpath]
+			f_container = FileContainer(src_fpath)
 			# check to see if this is an image file
 			if not is_img_file(src_fpath, options):
 				out.append("not_img")
 				write(out)
+				f_container.destroy()
+				del f_container
 				continue
 		
 			# get the date
-			created = get_time(src_fpath)
+			date_info = get_time(f_container)
+			out.append(date_info["msg"])
+			created = date_info["time"]
 			if created == None:
-				out.append("no_date")
 				write(out)
+				f_container.destroy()
+				del f_container
 				continue
 
 			# check the db to see if it already exists
-			src_hash = get_hash(src_fpath)
+			src_hash = f_container.hash
 			if options.write_to_db and is_in_database(f, src_hash, created):
 				out.append("in_db")
 				write(out)
+				f_container.destroy()
+				del f_container
 				continue
 
 			# ensure the path exists and check to see if the file is there
@@ -297,6 +333,8 @@ def main():
 				if resolution in ("exists_same", "exists_no_copy") and not options.db_only:
 					out.append(resolution)
 					write(out)
+					f_container.destroy()
+					del f_container
 					continue
 				if resolution == "exists_different_copying":
 					_, new_f = os.path.split(dest_fpath)
@@ -321,8 +359,11 @@ def main():
 				else:
 					out.append("not_created_no_db")
 				if options.thumbs:
-					create_thumbs(src_fpath, src_hash)
+					out.append("creating_thumb")
+					create_thumbs(f_container)
 			write(out)
+			f_container.destroy()
+			del f_container
 					
 		if options.recurse == False:
 			break
