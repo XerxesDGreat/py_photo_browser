@@ -32,21 +32,18 @@ def make_file_hash(path):
 	return h.hexdigest()
 
 def get_thumb_name(filename, hash):
-	filebase, ext = filename.split(".")
+	filebase, ext = os.path.splitext(filename)
 	return ".".join([filebase, hash, ext.lstrip(".").lower()])
 
-def create_thumb(src_path, target_path, size):
-	f = open(src_path) 
-	tags = exifread.process_file(f, stop_tag=STOP_TAG_NAME)
-	f.seek(0)
-	im = Image.open(f)
+def create_thumb(src_file, tags, target_path, size):
+	src_file.seek(0)
+	im = Image.open(src_file)
 	if IMAGE_ORIENTATION_TAGNAME in tags.keys():
 		img_orientation = tags[IMAGE_ORIENTATION_TAGNAME]
 		if str(img_orientation) in ROTATION_VALUES:
 			im = im.rotate(ROTATION_VALUES[str(img_orientation)])
 	im.thumbnail(size, Image.ANTIALIAS)
 	im.save(target_path)
-	f.close()
 
 
 def is_image_file(file_name):

@@ -12,19 +12,18 @@ from jinja2 import Environment, FileSystemLoader
 class Router:
 	def __init__(self, environ):
 		self._environ = environ
+		self._path = self._environ.get("PATH_INFO", "").lstrip("/")
 
 	def route (self):
-		path = self._environ.get('PATH_INFO', '').lstrip('/')
-		_, ext = os.path.splitext(path)
 		response = None
-		Logger.debug(path)
+		Logger.debug("path: %s" % self._path)
 		for regex, callback in S.ROUTES:
-			Logger.debug(regex)
-			match = re.search(regex, path)
+			Logger.debug("route regex: %s" % regex)
+			match = re.search(regex, self._path)
 			if match is not None:
 				Logger.debug("matched %s" % regex)
 				self._environ['myapp.url_args'] = match.groups()
-				response = self._success(callback)#, ext.lstrip("."))
+				response = self._success(callback)
 				break
 
 		if response == None:
@@ -33,7 +32,7 @@ class Router:
 		return response;
 
 	
-	def _success (self, callback):#, filetype):
+	def _success (self, callback):
 		parts = callback.split('.', 2)
 	
 		if len(parts) == 2:
@@ -56,7 +55,10 @@ class Router:
 		return RouteResponse.ok(resp["content"], headers)
 
 	def _notfound (self):
-		return RouteResponse.missing(Template.render("404.html"))
+		"""
+		Action to take when an appropriate route is not found
+		"""
+		return RouteResponse.missing(Template.render("404.html",{"path": self._path}))
 
 class RouteResponse:
 	STATUS_OK = "200 OK"
@@ -84,7 +86,7 @@ class RouteResponse:
 
 	@staticmethod
 	def missing(content):
-		headers = [("Content-Length", RouteResponse.HTML_CONTENT_TYPE)]
+		headers = [("Content-type", RouteResponse.HTML_CONTENT_TYPE)]
 		return RouteResponse(RouteResponse.STATUS_404, content, headers)
 
 	def getStatus (self):
