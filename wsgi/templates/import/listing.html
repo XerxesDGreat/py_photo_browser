@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/photos.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script type="text/javascript">
+	$(function() {
+		$("#accordion").accordion({
+			collapsible: true,
+			active: false
+		});
+	});
+</script>
+{% endblock %}
+
+{% block page_header %}
+Choose dir to import
+{% endblock %}
+
+{% block pagebody %}
+
+{% if dirs|length < 1 and files|length < 1 %}
+	Nothing to import 
+{% else %}
+
+	<div class="head_metadata">
+		<div class="count_nav">
+			Viewing {{ files|length }} of {{ total_files }} total
+		</div><!-- end div.count_nav -->
+		<div class="clearall"> </div><!-- end div.clearall -->
+	</div><!-- end div.head_metadata -->
+	
+	{% if dirs|length > 0 %}
+	<div id="accordion">
+		<h3>Subdirectories with files to import</h3>
+		<div>
+			<ul>
+			{% for d in dirs %}
+				<li>
+					<a href="{{ base_url }}/import/{{ d.rel_path}}">{{ d.friendly_name }}</a>
+				</li>
+			{% endfor %}
+			</ul>
+		</div>
+	</div><!-- end div#accordion -->
+	{% endif %}
+	
+	{% if files|length > 0 %}
+	<h3>Files in this subdirectory</h3>
+	<div class="head_metadata">
+		<a href="{{ base_url }}/import/preview/{{ current_dir }}">Begin import for this directory (non-recursive)</a>
+	</div>
+	<ul>
+		{% for f in files %}
+		<li>
+			{{ f.name }} (created: {{ f.created }}; hash: {{ f.hash }})
+		</li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+{% endif %}
+
+{% endblock %}

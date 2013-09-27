@@ -1,6 +1,8 @@
 from settings import Settings as S
-import MySQLdb
 from logger import Logger
+
+import MySQLdb
+import time
 
 class Database:
 	DB_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -84,6 +86,12 @@ class Database:
 			where_stmt
 		)
 		return Database._do_query(query)
+	
+	@staticmethod
+	def fetch_max_id(table_name):
+		field = FieldArg("id", None, None, FieldArg.DB_OP_MAX)
+		result_set = Database.fetch(table_name, [field])
+		return result_set[0][0]
 
 	@staticmethod
 	def update (table_name, values_to_update, id_values):
@@ -93,6 +101,7 @@ class Database:
 			", ".join([v.get_query_string() for v in values_to_update]),
 			" AND ".join([a.get_query_string() for a in id_values])
 		)
+		Logger.debug(query)
 		return Database._do_query(query)
 	
 	@staticmethod
@@ -120,6 +129,10 @@ class Database:
 		Logger.debug(query)
 		resp = Database._do_query(query, value_tuple)
 		return Database._cursor.lastrowid
+	
+	@staticmethod
+	def fetch_current_timestamp():
+		return time.strftime(Database.DB_DATE_FORMAT)
 
 	@staticmethod
 	def _do_query(query, values = None, commit = True):
@@ -140,7 +153,7 @@ class Database:
 
 		return results
 
-class FieldArg():
+class FieldArg(object):
 	CMP_LT = "<"
 	CMP_GT = ">"
 	CMP_LTE = "<="
@@ -149,11 +162,14 @@ class FieldArg():
 	CMP_NE = "<>"
 	CMP_BETWEEN = "BETWEEN"
 	CMP_IN = "IN"
+	CMP_NOT_IN = "NOT IN"
 
 	DB_OP_YEAR = "YEAR"
 	DB_OP_MONTH = "MONTH"
 	DB_OP_DAY = "DAY"
 	DB_OP_COUNT = "COUNT"
+	DB_OP_MIN = "MIN"
+	DB_OP_MAX = "MAX"
 
 	def __init__(self, field, compare_operation = None, compare_value = None, db_op = None):
 		self._field = field
@@ -170,6 +186,12 @@ class FieldArg():
 				field_str,
 				self._compare_value[0],
 				self._compare_value[1]
+			)
+		elif self._compare_operation in [FieldArg.CMP_IN, FieldArg.CMP_NOT_IN]:
+			str = "%s %s ('%s')" % (
+				field_str,
+				self._compare_operation,
+				"', '".join(self._compare_value)
 			)
 		elif self._compare_operation != None:
 			str = "%s %s '%s'" % (

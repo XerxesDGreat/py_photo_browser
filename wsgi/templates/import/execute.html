@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/import.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script type="text/javascript">
+</script>
+
+{% endblock %}
+
+{% block page_header %}
+Importing {{ import_dir }}
+{% endblock %}
+
+{% block pagebody %}
+{% if results|length < 1 %}
+	No files imported
+{% else %}
+	<div>
+	Moved {{ results|length }} file{% if results|length != 1 %}s{% endif %}
+	</div>
+	<table style="width: 900px; margin: 5px auto;">
+		<tr>
+		<th>File Name</th>
+		<th>Moved From</th>
+		<th>Move To</th>
+	</tr>
+
+	{% for file in results %}
+	<tr class="{{ loop.cycle("odd", "even") }}">
+		<td>{{ file.filename }}</td>
+		<td>{{ file.from }}</td>
+		<td>{{ file.to }}</td>
+	</tr>
+	{% endfor %}
+
+</table>
+{% endif %}
+{% endblock %}
+

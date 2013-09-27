@@ -15,6 +15,9 @@ class _Settings:
 		# get the local settings to override the defaults here
 		from config import local_config
 		self._config.update(local_config.config)
+
+		# perform post-local assignments
+		self._post_local_assignments()
 	
 	def _init_config(self):
 		# root directory for the app
@@ -44,15 +47,32 @@ class _Settings:
 		
 		# identify various routes with callbacks which can be taken
 		self._config["ROUTES"] = [
+			# css documents
 			(r"^css/?[_a-z]+\.css$", "css"),
+
+			# photo opereations
 			(r"^photos/single/.*$", "photo.get_one"),
 			(r"^photos/big/.*$", "photo.get_large_image"),
+			(r"^photos/small/.*$", "photo.get_small_image"),
 			(r"^photos/[0-9]{4}/(0[0-9]|1[0-2])/([0-2][0-9]|3[0-1])/?$", "photo.get_photos_from_date"),
 			(r"^photos/?([0-9]{4}/?((0[0-9]|1[0-2])/?)?)?$", "photo.get_dirs_from_date"),
+
+			# marked photo operations
 			(r"^marked/?$", "photo.get_marked_photos"),
 			(r"^photos/mark/?$", "photo.mark_photo"),
 			(r"^photos/unmark/?$", "photo.unmark_photo"),
+
+			# importing
+			(r"^import/preview/.*$", "import.preview"),
+			(r"^import/confirm/?$", "import.update_and_confirm"),
+			(r"^import/execute/?$", "import.execute_import"),
+			(r"^import/progress/[a-z0-9]{32}", "import.get_progress"),
+			(r"^import(/?|/.*)$", "import"),
+
+			# stats
 			(r"^stats/?$", "stats"),
+
+			# main index page
 			(r"^/?$", "index")
 		]
 		
@@ -75,6 +95,12 @@ class _Settings:
 		self._config["DEFAULT_PER_PAGE"] = 20
 
 		self._config["SITE_NAME"] = "Photo Browser"
+	
+	def _post_local_assignments(self):
+		"""
+		Assignments which depend on something in the local config to be assigned
+		"""
+		self._config["IMPORT_DIR"] = os.path.join(self.BASE_FS_PATH, "import")
 
 	
 	def __getattr__(self, name):

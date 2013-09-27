@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% import "macros/partials.html" as partials with context %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/import.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script type="text/javascript">
+$(function() {
+	$("div.img_container").each(function() {
+		fetchImg($(this).attr("id"), $(this).data("img_src"));
+	});
+});
+
+function fetchImg (divId, path) {
+	$('<img src="'+ path +'" class="half-size">').load(function() {
+		$("img", "#" + divId).replaceWith(this);
+//		$(this).appendTo("#" + divId);
+	})
+}
+</script>
+
+{% endblock %}
+
+{% block page_header %}
+Confirm import for {{ rel_import_dir }}
+{% endblock %}
+
+{% block pagebody %}
+{% if files|length < 1 %}
+	No files to import in {{ import_dir }}
+{% else %}
+	<h2>
+		Please confirm the following files are going to be imported/deleted with the
+		indicated dates
+	</h2>
+<form action="{{ base_url }}/import/execute/" method="post">
+	<input type="hidden" name="import_id" value="{{ import_id }}" />
+	<input type="hidden" name="import_dir" value="{{ import_dir }}" />
+	<div class="buttons">
+		<a href="{{ base_url }}/import/preview/{{ rel_import_path }}" />Make Changes</a> | 
+		<input type="submit" name="topSubmit" value="Do Import" />
+	</div><!-- end div.buttons -->
+	<table style="width: 900px; margin: 5px auto;">
+		<tr>
+			<th>File Name</th>
+			<th>Thumb</th>
+			<th>Image Date/Time</th>
+			<th>Hash</th>
+			<th>Conflicts</th>
+			<th>Delete?</th>
+		</tr>
+
+		{% for file in files %}
+		<tr class="{{ loop.cycle("odd", "even") }}">
+			<td>{{ file.name }}</td>
+			<td>
+				<div id="img_container_{{ file.hash }}"
+					class="img_container"
+					data-img_src="{{ base_url }}/photos/small/{{ file.rel_path }}">
+					<img src="{{ base_url }}/img/loading.gif" />
+				</div><!-- end div.img_container -->
+			</td>
+			<td{% if file.time == None %} class="warning"{% endif %}>{{ file.time }}</td>
+			<td>{{ file.hash[:5] }}...{{ file.hash[-5:] }}</td>
+			<td{% if file.hash in conflicts %} class="warning"{% endif %} style="text-align: center;">
+				{% if file.hash in conflicts %}
+				{% for conflict in conflicts[file.hash] %}
+					{{ conflict.name }} in {{ conflict.path }} on {{ conflict.time }}
+				{% endfor %}
+				{% else %}
+				---
+				{% endif %}
+			</td>
+			<td style="text-align: center;">
+				{% if file.marked %}yes{% else %}no{% endif %}
+			</td>
+		</tr>
+		{% endfor %}
+
+	</table>
+	<div class="buttons">
+		<a href="{{ base_url }}/import/preview/{{ rel_import_path }}" />Make Changes</a>
+		<input type="submit" name="topSubmit" value="Do Import" />
+	</div><!-- end div.buttons -->
+</form>
+{% endif %}
+{% endblock %}
+

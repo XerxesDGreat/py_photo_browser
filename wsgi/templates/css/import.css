@@ -1,0 +1,35 @@
+.attention_bg {
+	background-color: #ffc;
+}
+
+.buttons {
+	text-align: right;
+}
+
+td {
+	text-align: center;
+	vertical-align: middle;
+	padding: 8px 0px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+tr {
+	border: 1px solid #ddd;
+}
+
+tr.even {
+	background-color: #ddd;
+}
+
+.warning {
+	color: #c00;
+	background-color: #fcc;
+}
+
+.half-size {
+	max-height: 100px;
+	max-width: 100px;
+}

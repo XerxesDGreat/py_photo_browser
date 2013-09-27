@@ -10,6 +10,7 @@ sys.path.append(os.path.join(current_dir, "src"))
 
 from router import *
 from logger import Logger
+from registry import ObjectRegistry
 
 def application(environ, startResponse):
 	# we need the ability to do some logging, I think
@@ -27,6 +28,8 @@ def application(environ, startResponse):
 		resp = ErrorRouteResponse(output) 
 	
 	startResponse(resp.getStatus(), resp.getHeaders())
+
+	ObjectRegistry.destroy_all()
 
 	return [resp.getContent()]
 

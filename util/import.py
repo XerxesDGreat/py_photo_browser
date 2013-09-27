@@ -23,10 +23,6 @@ L.init(sys.stderr, L.WARNING)
 WORKING_BASE_DIR = "."
 DEST_BASE_DIR = "/home/josh/Dropbox/Photos"
 WRITE = True
-DATE_FIELD = "Image DateTime"
-BK_DATE_FIELD = "EXIF DateTimeOriginal"
-EMPTY_DATE = "0000:00:00 00:00:00"
-EXIF_DATE_FORMAT = "%Y:%m:%d %H:%M:%S"
 SUPPORTED_IMG_EXTENSIONS = [
 	"jpeg",
 	"jpg",
@@ -43,20 +39,6 @@ DESCRIPTION = """Transfers images from one directory to another, putting each
 image in a subdirectory corresponding to its creation date. If the image already exists in the destination, will compare the files using SHA1 and, if they have different contents, will copy using a new name based on the hash. Outputs one line for each file encountered in the format "<source_file_path> <dest_file_path> <action_taken> where resolution is in ("exists_same", "exists_different_copied", "new", "not_img"). Most common image extensions will be copied: (%s)""" % (
 	", ".join(SUPPORTED_IMG_EXTENSIONS)
 )
-
-class FileContainer(object):
-	def __init__(self, file_path):
-		self.file_path = file_path
-		self.file_handle = open(file_path)
-		self.tags = exifread.process_file(self.file_handle, details=False)
-		self.file_handle.seek(0)
-		self.hash = src.util.make_file_hash(self.file_path)
-	
-	def destroy(self):
-		self.file_handle.close()
-		self.tags = None
-		self.file_path = None
-	
 
 def is_img_file(file_name, options):
 	_, ext = os.path.splitext(file_name)
@@ -105,62 +87,6 @@ def create_single_thumb(size, fc, thumb_name):
 		return
 	src.util.create_thumb(fc.file_handle, fc.tags, target, size)
 
-def get_time(fc):
-	retval = {
-		"time": None,
-		"msg": "no_date"
-	}
-	file_name = fc.file_path
-	dir_name, file_name = os.path.split(file_name)
-	relpath = os.path.relpath(dir_name, os.path.realpath(DEST_BASE_DIR))
-	parts = relpath.split(os.sep)
-	try:
-		year = int(parts[0]) if len(parts) > 0 else None
-		month = int(parts[1]) if len(parts) > 1 else None
-		day = int(parts[2]) if len(parts) > 2 else None
-	except Exception:
-		year = month = day = None
-
-	# force date supercedes all
-	if get_options().force_date_from_path:
-		if year == None or month == None or day == None:
-			return retval
-		return time.strptime("%s-%s-%s" % (year, month, day), "%Y-%m-%d")
-	
-	exif_time = None
-	try:
-		exif_time = time.strptime(str(fc.tags[DATE_FIELD]), EXIF_DATE_FORMAT)
-	except Exception:
-		pass
-	
-	try:
-		exif_time = time.strptime(str(fc.tags[BK_DATE_FIELD]), EXIF_DATE_FORMAT)
-	except Exception:
-		pass
-	
-	get_date_from_path = False
-	if (exif_time == None):
-		retval["msg"] = "no_exif_date"
-		get_date_from_path = True
-	
-	elif (exif_time.tm_year != year or exif_time.tm_mon != month
-		or exif_time.tm_mday != day):
-		retval["msg"] = "no_date_match[%s-%s-%s]" % (
-			exif_time.tm_year,
-			exif_time.tm_mon,
-			exif_time.tm_mday
-		)
-		get_date_from_path = True
-	
-	else:
-		retval["msg"] = "date_from_exif"
-		retval["time"] = exif_time
-	
-	if get_date_from_path:
-		if (year != None and month != None and day != None):
-			retval["time"] = time.strptime("%s-%s-%s" % (year, month, day), "%Y-%m-%d")
-
-	return retval
 
 def write(pieces):
 	global logfile
@@ -295,7 +221,7 @@ def main():
 		for f in files:
 			src_fpath = os.path.join(src_dir, f)
 			out = [src_fpath]
-			f_container = FileContainer(src_fpath)
+			f_container = util.FileContainer(src_fpath, src)
 			# check to see if this is an image file
 			if not is_img_file(src_fpath, options):
 				out.append("not_img")
@@ -305,7 +231,7 @@ def main():
 				continue
 		
 			# get the date
-			date_info = get_time(f_container)
+			date_info = util.get_time(f_container, get_options.force_date_from_path)
 			out.append(date_info["msg"])
 			created = date_info["time"]
 			if created == None:

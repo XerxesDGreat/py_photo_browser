@@ -1,3 +1,6 @@
+import inspect
+import os
+
 class Logger:
 	_environ = None
 	_logLevel = None 
@@ -39,7 +42,17 @@ class Logger:
 	@staticmethod
 	def _log(log_type, msg):
 		assert Logger.isInit(), "must initialize Logger before use"
-		print >> Logger._environ, "%s: %s" % (log_type, str(msg))
+		'''
+		frames = inspect.stack()
+		if len(frames) < 3:
+			frame_str = ""
+		else:
+			caller_frame = frames[2]
+			_, file_name = os.path.split(caller_frame[1])
+			frame_str = "::".join([file_name, str(caller_frame[2]), caller_frame[3]])
+		'''
+		frame_str = ""
+		print >> Logger._environ, "[%s] %s: %s" % (frame_str, log_type, str(msg))
 	
 	@staticmethod
 	def setLogLevel(level):

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% import "macros/partials.html" as partials with context %}
+
+{% block css_includes %}
+{{ super() }}
+<link href="{{ base_url }}/css/import.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js_includes %}
+{{ super() }}
+<script type="text/javascript">
+/*
+	$(function() {
+		$("#accordion").accordion({
+			collapsible: true,
+			active: false
+		});
+	});
+*/
+$(function() {
+	$("div.img_container").each(function() {
+		fetchImg($(this).attr("id"), $(this).data("img_src"));
+	});
+});
+
+function fetchImg (divId, path) {
+	$('<img src="'+ path +'" class="half-size">').load(function() {
+		$("img", "#" + divId).replaceWith(this);
+//		$(this).appendTo("#" + divId);
+	})
+}
+</script>
+
+{% endblock %}
+
+{% block page_header %}
+Importing {{ import_dir }}
+{% endblock %}
+
+{% block pagebody %}
+{% if files|length < 1 %}
+	No files to import in {{ import_dir }}
+{% else %}
+<form action="{{ base_url }}/import/confirm/" method="POST">
+	<input type="hidden" name="import_id" value="{{ import_id }}" />
+	<div class="buttons">
+		<input type="submit" name="submit-bk" value="Next step ->" />
+	</div><!-- end div.buttons -->
+	<table style="width: 900px; margin: 5px auto;">
+		<tr>
+			<th>File Name</th>
+			<th>Thumb</th>
+			<th>Image Date/Time</th>
+			<th>Hash</th>
+			<th>Conflicts</th>
+			<th>Delete?</th>
+		</tr>
+
+		{% for file in files %}
+		<tr class="{{ loop.cycle("odd", "even") }}">
+			<td>{{ file.name }}</td>
+			<td>
+				<div id="img_container_{{ file.hash }}"
+					class="img_container"
+					data-img_src="{{ base_url }}/photos/small/{{ file.rel_path }}">
+					<img src="{{ base_url }}/img/loading.gif" />
+				</div><!-- end div.img_container -->
+			</td>
+			<td{% if file.time == None %} class="warning"{% endif %}>
+				<input type="text" name="time_{{ file.hash }}" value="{{ file.time }}" />
+			</td>
+			<td>{{ file.hash[:5] }}...{{ file.hash[-5:] }}</td>
+			<td{% if file.hash in conflicts %} class="warning"{% endif %} style="text-align: center;">
+				{% if file.hash in conflicts %}
+				{% for conflict in conflicts[file.hash] %}
+					{{ conflict.name }} in {{ conflict.path }} on {{ conflict.time }}
+				{% endfor %}
+				{% else %}
+				---
+				{% endif %}
+			</td>
+			<td style="text-align: center;">
+				<input type="checkbox" name="delete" value="{{ file.hash }}" />
+			</td>
+		</tr>
+		{% endfor %}
+
+	</table>
+	<div class="buttons">
+		<input type="submit" name="submit" value="Next step ->" />
+	</div><!-- end div.buttons -->
+</form>
+{% endif %}
+{% endblock %}
+
