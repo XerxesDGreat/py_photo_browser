@@ -10,8 +10,8 @@ class Database:
 	_cursor = None
 
 	@staticmethod
-	def _init():
-		if (Database._cursor != None and Database._db != None):
+	def _init(force=False):
+		if Database._cursor != None and Database._db != None and not force:
 			return
 
 		cfg = S.DATABASE
@@ -47,7 +47,7 @@ class Database:
 			limit_stmt,
 			offset_stmt
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
 	
 	@staticmethod
 	def _assert_valid_args(args):
@@ -85,7 +85,7 @@ class Database:
 			table_name,
 			where_stmt
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
 	
 	@staticmethod
 	def fetch_max_id(table_name):
@@ -101,7 +101,7 @@ class Database:
 			", ".join([v.get_query_string() for v in values_to_update]),
 			" AND ".join([a.get_query_string() for a in id_values])
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
 	
 	@staticmethod
 	def update_by_id(table_name, id, values_to_update):
@@ -124,7 +124,7 @@ class Database:
 			", ".join(repl_type_list)
 		)
 		value_tuple = tuple(value_list)
-		resp = Database._do_query(query, value_tuple)
+		resp = Database._do_query_wrapper(query, value_tuple)
 		return Database._cursor.lastrowid
 	
 	@staticmethod
@@ -132,21 +132,31 @@ class Database:
 		return time.strftime(Database.DB_DATE_FORMAT)
 
 	@staticmethod
-	def _do_query(query, values = None, commit = True):
+	def _do_query_wrapper(query, values = None, commit = True):
 		Logger.info("Executing query: %s" % query)
 		results = []
 		try:
-			Database._cursor.execute(query, values)
-			if commit:
-				Database._db.commit()
-			results = Database._cursor.fetchall()
+			results = Database._do_query(query, values, commit)
 
-		except Exception, e:
+		except MySQLdb.OperationalException as e:
+			if e.errno == 2006:
+				self._init(True)
+				Database._do_query(query, values, commit)
+
+		except Exception as e:
 			Logger.error("database exception caught: %s" % str(e))
 			Logger.info("query: %s, values: %s, commit: %s" % (
 				str(query),str(values), str(commit)))
 			Database._db.rollback()
 
+		return results
+
+	@staticmethod
+	def _do_query(query, values = None, commit = True):
+		Database._cursor.execute(query, values)
+		if commit:
+			Database._db.commit()
+		results = Database._cursor.fetchall()
 		return results
 
 class FieldArg(object):

@@ -171,7 +171,8 @@ class PhotoController(BaseController):
 		try:
 			id = int(id)
 			p = Photo.get_by_id(id)
-		except:
+		except e:
+			Logger.warning("could not find photo for id %d" % id)
 			p = None
 
 		if p == None:
