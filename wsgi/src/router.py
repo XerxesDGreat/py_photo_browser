@@ -19,7 +19,6 @@ class Router:
 		for regex, callback in S.ROUTES:
 			match = re.search(regex, self._path)
 			if match is not None:
-				Logger.debug("matched %s" % regex)
 				self._environ['myapp.url_args'] = match.groups()
 				response = self._success(callback)
 				break

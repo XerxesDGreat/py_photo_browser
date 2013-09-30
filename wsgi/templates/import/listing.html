@@ -57,7 +57,7 @@ Choose dir to import
 	<ul>
 		{% for f in files %}
 		<li>
-			{{ f.name }} (created: {{ f.created }}; hash: {{ f.hash }})
+			{{ f.name }} (created: {{ f.time }}; hash: {{ f.hash }})
 		</li>
 		{% endfor %}
 	</ul>

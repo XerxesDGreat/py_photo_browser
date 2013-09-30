@@ -10,6 +10,7 @@ import exifread
 import datetime
 import time
 import shutil
+import threading
 
 class Photo(object):
 	SMALL_THUMB_SIZE = (200, 200)
@@ -59,8 +60,7 @@ class Photo(object):
 		property_name = "_%s" % name
 		object.__setattr__(self, property_name, value)
 
-		if set_dirty:
-			Photo.dirty_list[self.hash] = self
+		self.set_dirty()
 
 	@property
 	def thumb_url(self):
@@ -254,7 +254,7 @@ class Photo(object):
 			kwargs["hash"] if "hash" in kwargs.keys() else None,
 			kwargs["marked"] if "marked" in kwargs.keys() else False
 		)
-		return Photo(Photo.GUARD, data_tuple)
+		return Photo(Photo.GUARD, data_tuple, True)
 	
 	@staticmethod
 	def from_file_container(fc):
@@ -274,7 +274,7 @@ class Photo(object):
 			fc.hash,
 			False
 		)
-		p = Photo(Photo.GUARD, data_tuple)
+		p = Photo(Photo.GUARD, data_tuple, True)
 		p.file_container = fc
 		return p
 
@@ -286,6 +286,7 @@ class Photo(object):
 		if Photo.NEXT_AVAILABLE_ID < 0:
 			Photo.NEXT_AVAILABLE_ID = DB.fetch_max_id(Photo.DB_TABLE_NAME)
 		Photo.NEXT_AVAILABLE_ID += 1
+		retval = Photo.NEXT_AVAILABLE_ID
 		return Photo.NEXT_AVAILABLE_ID
 
 	@staticmethod
@@ -305,7 +306,7 @@ class Photo(object):
 		Photo object
 		"""
 		inserted_id = Photo._create_work(file_basename, path, hash, created_struct)
-		Logger.debug("insert results: %s" % str(inserted_id))
+		Logger.info("insert results: %s" % str(inserted_id))
 		return Photo.get_by_id(inserted_id)
 	
 	@staticmethod
@@ -326,14 +327,14 @@ class Photo(object):
 	############################################################################
 	# INSTANCE METHODS
 	############################################################################
-	def __init__(self, guard, db_row):
+	def __init__(self, guard, db_row, new = False):
 		"""
 		Constructor; uses a guard to ensure noone else uses it
 		"""
 		if guard != Photo.GUARD:
 			raise Exception("Must only call __init__ from the accessor methods in Photo")
 		self._id, self._filename, self._path, self._added, self._modified, self._image_date, self._hash, self._marked = db_row
-		self.dirty = []
+		self.new = new
 		self._tags = None
 		self._handle = None
 		self.file_container = None
@@ -343,15 +344,12 @@ class Photo(object):
 		"""
 		Gets the file name for a thumbnail (<basename>.<hash>.<ext>)
 		"""
-		Logger.debug("filename: %s" % self.filename)
 		return util.get_thumb_name(self.filename, self.hash)
 	
 	def get_dir_from_date(self):
-		Logger.debug(self.image_date)
 		if self.image_date == None:
 			return os.path.join(S.BASE_FS_PATH, Photo.NO_DATE_DIR)
 		struct = time.strptime(self.image_date, DB.DB_DATE_FORMAT)
-		Logger.debug(struct)
 		year = str(struct[0])
 		month = "0%d" % struct[1] if struct[1] < 10 else str(struct[1])
 		day = "0%d" % struct[2] if struct[2] < 10 else str(struct[2])
@@ -398,7 +396,7 @@ class Photo(object):
 		src_path = os.path.join(src_dir, self.filename)
 		target_dir = self.get_dir_from_date() if target_dir == None else target_dir
 		if not os.path.exists(target_dir):
-			Logger.debug("making dir: %s" % target_dir)
+			Logger.info("making dir: %s" % target_dir)
 			os.makedirs(target_dir)
 		new_filename = self.filename
 
@@ -415,42 +413,58 @@ class Photo(object):
 					% (new_filename, target_dir))
 		target_path = os.path.join(target_dir, new_filename)
 
+		# can't do crap with an open file reference
+		if self.file_container != None and self.file_container.file_handle != None:
+			self.file_container.file_handle.close()
+			self.file_container.file_handle = None
+
 		if copy:
-			Logger.debug("copying from %s to %s" % (src_path, target_path))
+			Logger.info("copying from %s to %s" % (src_path, target_path))
 			shutil.copy2(src_path, target_path)
 		else:
-			Logger.debug("moving from %s to %s" % (src_path, target_path))
+			Logger.info("moving from %s to %s" % (src_path, target_path))
 			shutil.move(src_path, target_path)
 
 		self.path = target_dir
 		self.filename = new_filename
-			
+		if self.file_container != None:
+			self.file_container.file_path = os.path.join(target_dir, new_filename)
+			self.file_container.handle = open(self.file_container.file_path)
+	
+	def set_dirty(self):
+		"""
+		Sets this object as dirty
+		"""
+		if self.hash not in Photo.dirty_list.keys():
+			Photo.dirty_list[self.hash] = self
 
 	def store(self):
 		"""
 		Stores any changes to this object to the database. Also creates the
 		db record if necessary
 		"""
-		if self.id == None:
+		if self.new:
 			time_struct = time.strptime(self.image_date, DB.DB_DATE_FORMAT)
 			photo = Photo.create(self.filename, self.path, self.hash, time_struct)
 			self._values_from_photo_object(photo, False)
+			del(photo)
 
 		else:
-			if len(self.dirty) < 1:
+			if self.hash not in Photo.dirty_list:
 				return
 		
 			DB.update_by_id(Photo.DB_TABLE_NAME, self.id, self._get_db_tuples())
-			self.dirty[:] = []
+			del(Photo.dirty_list[self.hash])
 	
 	def _values_from_photo_object(self, photo, set_dirty=True):
 		"""
-		Updates this photo object with 
+		Updates this photo object with values from the provided photo object
 		"""
-		Logger.debug(photo)
-		self._set_internal("id", photo.id, True, set_dirty)
-		self._set_internal("added", photo.added, True, set_dirty)
-		self._set_internal("modified", photo.modified, True, set_dirty)
+		Logger.debug("updating information")
+		self._id = photo.id
+		self._added = photo.added
+		self._modified = photo.modified
+		self.set_dirty()
 	
 	def destroy(self):
 		"""
@@ -475,3 +489,6 @@ class Photo(object):
 		
 	def __str__(self):
 		return "photo obj[id=%s] [name=%s] [img_date=%s]" % (self.id, self.filename, self.image_date)
+	
+	def __del__(self):
+		self.destroy()

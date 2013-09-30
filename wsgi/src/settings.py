@@ -100,8 +100,7 @@ class _Settings:
 		"""
 		Assignments which depend on something in the local config to be assigned
 		"""
-		self._config["IMPORT_DIR"] = os.path.join(self.BASE_FS_PATH, "import")
-
+		pass
 	
 	def __getattr__(self, name):
 		if name not in self._config.keys():

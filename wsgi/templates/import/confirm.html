@@ -68,9 +68,7 @@ Confirm import for {{ rel_import_dir }}
 			<td>{{ file.hash[:5] }}...{{ file.hash[-5:] }}</td>
 			<td{% if file.hash in conflicts %} class="warning"{% endif %} style="text-align: center;">
 				{% if file.hash in conflicts %}
-				{% for conflict in conflicts[file.hash] %}
-					{{ conflict.name }} in {{ conflict.path }} on {{ conflict.time }}
-				{% endfor %}
+				{{ conflicts[file.hash]|join(", ") }}
 				{% else %}
 				---
 				{% endif %}

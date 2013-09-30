@@ -101,7 +101,6 @@ class Database:
 			", ".join([v.get_query_string() for v in values_to_update]),
 			" AND ".join([a.get_query_string() for a in id_values])
 		)
-		Logger.debug(query)
 		return Database._do_query(query)
 	
 	@staticmethod
@@ -112,7 +111,6 @@ class Database:
 	@staticmethod
 	def create (table_name, data_list):
 		Database._init()
-		#query = 'INSERT INTO `' + table_name + '` SET '
 		value_list = []
 		field_list = []
 		repl_type_list = []
@@ -126,7 +124,6 @@ class Database:
 			", ".join(repl_type_list)
 		)
 		value_tuple = tuple(value_list)
-		Logger.debug(query)
 		resp = Database._do_query(query, value_tuple)
 		return Database._cursor.lastrowid
 	
@@ -136,7 +133,7 @@ class Database:
 
 	@staticmethod
 	def _do_query(query, values = None, commit = True):
-		Logger.debug("Executing query: %s" % query)
+		Logger.info("Executing query: %s" % query)
 		results = []
 		try:
 			Database._cursor.execute(query, values)
@@ -145,10 +142,9 @@ class Database:
 			results = Database._cursor.fetchall()
 
 		except Exception, e:
-			Logger.debug("database exception caught: %s" % str(e))
-			Logger.debug("query: %s, values: %s, commit: %s" % (
+			Logger.error("database exception caught: %s" % str(e))
+			Logger.info("query: %s, values: %s, commit: %s" % (
 				str(query),str(values), str(commit)))
-			Logger.error('some exception caught')
 			Database._db.rollback()
 
 		return results

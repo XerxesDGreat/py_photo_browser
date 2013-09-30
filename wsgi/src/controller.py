@@ -75,7 +75,6 @@ class StatsController(BaseController):
 			("Disk space", total_size, "bytes")
 		])
 
-		Logger.debug(str(stats.keys()))
 		return self.construct_response(Template.render("stats.html", {"stats": stats}))
 	
 	def _thumb_info(self, size):
@@ -112,10 +111,8 @@ class PhotoController(BaseController):
 		path = os.path.relpath(path, "photos")
 		Logger.debug(path)
 		path_parts = path.split(os.sep)
-		Logger.debug(path_parts)
 		if len(path_parts) == 1 and path_parts[0] == ".":
 			path_parts = []
-		Logger.debug(path_parts)
 
 		year = None if len(path_parts) < 1 else path_parts[0]
 		month = None if len(path_parts) < 2 else path_parts[1]
@@ -128,7 +125,6 @@ class PhotoController(BaseController):
 			"year": year,
 			"month": month
 		}
-		Logger.debug(list)
 		return self.construct_response(Template.render("photos/dirs.html", tokens))
 	
 	def get_photos_from_date(self):
@@ -147,12 +143,9 @@ class PhotoController(BaseController):
 		num_photos = Photo.get_count_by_date(year=year, month=month, day=day)
 		start_index = (offset * limit) + 1
 		end_index = min(((offset + 1) * limit), num_photos)
-		Logger.debug("num_photos: %d, start_index: %d, end_index: %d" % (num_photos, start_index, end_index))
 
 		photos = Photo.get_by_date(year=year, month=month, day=day, limit=limit,
 			offset=(offset * limit))
-		Logger.debug("first: %d, last: %d" % (photos[0].id, photos[-1].id))
-		Logger.debug("num_photos_fetched: %d" % len(photos))
 		tokens = {
 			"photos": photos,
 			"offset": offset,
@@ -164,7 +157,6 @@ class PhotoController(BaseController):
 		return self.construct_response(Template.render("photos/list.html", tokens))
 	
 	def get_small_image(self):
-		Logger.debug("get_small_image")
 		return self._get_image(Photo.SMALL_THUMB_SIZE, "small")
 	
 	def get_large_image(self):
@@ -176,7 +168,6 @@ class PhotoController(BaseController):
 		the image raw data.
 		"""
 		id = self._get_id_from_path(action)
-		Logger.debug(id)
 		try:
 			id = int(id)
 			p = Photo.get_by_id(id)
@@ -186,15 +177,12 @@ class PhotoController(BaseController):
 		if p == None:
 			fc = util.FileContainer(os.path.join(S.IMPORT_DIR, id), S.IMPORT_DIR)
 			fc.time = util.get_time(fc)["time"]
-			Logger.debug(str(fc.__dict__()))
 			p = Photo.from_file_container(fc)
 			if p == None:
 				return "404"
 
-		Logger.debug(str(p))
 		rel_thumb_path = p.get_or_create_thumb(size)
 		f = open(os.path.join(S.THUMBNAIL_DIR, rel_thumb_path))
-		Logger.debug(rel_thumb_path)
 		raw_image = f.read()
 		f.close()
 		return self.construct_response(raw_image, self._route_types.JPEG_CONTENT_TYPE)
@@ -245,7 +233,7 @@ class PhotoController(BaseController):
 		"""
 		post_args = parse_qs(self._env["wsgi.input"].read())
 		if "id" not in post_args:
-			Logger.debug("not in post args: %s" % str(post_args))
+			Logger.warning("not in post args: %s" % str(post_args))
 			return self.construct_response(json.dumps({
 				"success": False,
 				"error": "missing args",
@@ -256,7 +244,7 @@ class PhotoController(BaseController):
 		_, id = post_ids[0].split("_")
 		p = Photo.get_by_id(id)
 		if p == None:
-			Logger.debug("no photo retrieved")
+			Logger.warning("no photo retrieved")
 			return self.construct_response(json.dumps({
 				"success": False,
 				"error": "invalid_id",
@@ -272,7 +260,6 @@ class PhotoController(BaseController):
 					"id": id
 				}
 			}), self._route_types.JSON_CONTENT_TYPE)
-		Logger.debug(a)
 		return a
 	
 	def _get_id_from_path(self, command):
@@ -305,7 +292,6 @@ class ImportController(BaseController):
 		provided by self._env
 		"""
 		rel_import_dir = os.path.relpath(self._env.get("PATH_INFO", "").lstrip("/"), "import")
-		Logger.debug("import dir: %s" % str(S.IMPORT_DIR))
 		dir_to_show = os.path.join(S.IMPORT_DIR, rel_import_dir)
 		file_listing = []
 		dir_listing = []
@@ -318,6 +304,7 @@ class ImportController(BaseController):
 						"rel_path": os.path.relpath(os.path.join(base_dir, d), S.IMPORT_DIR),
 						"friendly_name": d
 					})
+				dir_listing = sorted(dir_listing, key=itemgetter("friendly_name"))
 			for f in files:
 				if not util.is_image_file(f):
 					continue
@@ -373,10 +360,13 @@ class ImportController(BaseController):
 			break
 		file_listing = sorted(file_listing, key=itemgetter('name'))
 		conflicts = Photo.get_by_hash(hashes)
+
 		for conflict_hash in conflicts.keys():
 			conflicts_for_json = [c.id for c in conflicts[conflict_hash]]
 			session_file_struct[conflict_hash]["conflicts"] = conflicts_for_json
 			session_file_struct[conflict_hash]["file_data"]["marked"] = True
+			Logger.debug(session_file_struct)
+
 		session_id = import_identifier.hexdigest()
 		session_data = {
 			"file_listing": session_file_struct,
@@ -414,9 +404,7 @@ class ImportController(BaseController):
 		file_listing = []
 		conflicts = {}
 		for file_hash in session_data["file_listing"].keys():
-			Logger.debug(str(file_hash))
 			file_data = session_data["file_listing"][file_hash]
-			Logger.debug(str(file_data))
 			fc = util.FileContainer.from_dict(file_data["file_data"])
 			if file_hash in delete_hashes: 
 				fc.marked = True
@@ -460,29 +448,37 @@ class ImportController(BaseController):
 		with open(session_file_path, "r") as handle:
 			session_data = json.loads(handle.read())
 		import_dir = os.path.join(S.IMPORT_DIR, session_data["rel_dir"])
-		results = []
+		success_results = []
+		failed_results = []
 		for file_hash in session_data["file_listing"].keys():
+			file_data = session_data["file_listing"][file_hash]
+			fc = util.FileContainer.from_dict(file_data["file_data"])
+			result = {
+				"filename": fc.name,
+				"from": fc.rel_path
+			}
 			try:
-				result = {}
-				file_data = session_data["file_listing"][file_hash]
-				fc = util.FileContainer.from_dict(file_data["file_data"])
-				result["filename"] = fc.name
-				result["from"] = fc.rel_path
 				if fc.marked:
+					to_remove = fc.file_path
 					fc.destroy()
-					Logger.debug("not importing %s because it is marked" % fc.file_path)
-					os.remove(fc.file_path)
-					continue
-	
-				p = Photo.from_file_container(fc)
-				p.move_file(src_dir=p.path, copy=False)
-				p.store()
-				result["to"] = p.rel_path
-				results.append(result)
+					Logger.debug("not importing %s because it is marked" % to_remove)
+					os.remove(to_remove)
+					result["to"] = "deleted"
+				else:
+					p = Photo.from_file_container(fc)
+					p.move_file(src_dir=p.path, copy=False)
+					p.store()
+					result["to"] = p.rel_path
 			except Exception, e:
-				Logger.debug("was not able to do something: %s" % str(e))
+				result["error"] = str(e)
+				Logger.error("was not able to do something: %s" % str(e))
+			if "error" in result.keys():
+				failed_results.append(result)
+			else:
+				success_results.append(result)
 
-		file_listing = sorted(results, key=itemgetter('filename'))
+		success_results = sorted(success_results, key=itemgetter('filename'))
+		failed_results = sorted(failed_results, key=itemgetter("filename"))
 		
 		# when all is done, clean up
 		Logger.debug("removing %s" % session_file_path)
@@ -494,7 +490,8 @@ class ImportController(BaseController):
 			Template.render(
 				"import/execute.html",
 				{
-					"results": results,
+					"success_results": success_results,
+					"failed_results": failed_results,
 					"import_id": session_id
 				}
 			),

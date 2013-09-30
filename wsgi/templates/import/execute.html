@@ -8,6 +8,11 @@
 {% block js_includes %}
 {{ super() }}
 <script type="text/javascript">
+	$(function() {
+		$("#accordion").accordion({
+			collapsible: true,
+		});
+	});
 </script>
 
 {% endblock %}
@@ -17,28 +22,40 @@ Importing {{ import_dir }}
 {% endblock %}
 
 {% block pagebody %}
-{% if results|length < 1 %}
-	No files imported
-{% else %}
-	<div>
-	Moved {{ results|length }} file{% if results|length != 1 %}s{% endif %}
-	</div>
+<div id="accordion">
+	<h3>Moved files: ({{ success_results|length }} total)</h3>
 	<table style="width: 900px; margin: 5px auto;">
 		<tr>
-		<th>File Name</th>
-		<th>Moved From</th>
-		<th>Move To</th>
-	</tr>
-
-	{% for file in results %}
-	<tr class="{{ loop.cycle("odd", "even") }}">
-		<td>{{ file.filename }}</td>
-		<td>{{ file.from }}</td>
-		<td>{{ file.to }}</td>
-	</tr>
-	{% endfor %}
-
-</table>
-{% endif %}
+			<th>File Name</th>
+			<th>Moved From</th>
+			<th>Move To</th>
+		</tr>	
+		{% for file in success_results %}
+		<tr class="{{ loop.cycle("odd", "even") }}">
+			<td>{{ file.filename }}</td>
+			<td>{{ file.from }}</td>
+			<td>{{ file.to }}</td>
+		</tr>
+		{% endfor %}
+	
+	</table>
+	<h3>Un-moved files: ({{ failed_results|length }} total)</h3>
+	<table style="width: 900px; margin: 5px auto;">
+		<tr>
+			<th>File Name</th>
+			<th>Path</th>
+			<th>Error</th>
+		</tr>
+	
+		{% for file in failed_results %}
+		<tr class="{{ loop.cycle("odd", "even") }}">
+			<td>{{ file.filename }}</td>
+			<td>{{ file.from }}</td>
+			<td>{{ file.error }}</td>
+		</tr>
+		{% endfor %}
+	
+	</table>
+</div><!-- end div#accordion -->
 {% endblock %}
 

@@ -1,6 +1,7 @@
 from cgi import parse_qs, escape
 from logger import Logger
 from settings import Settings as S
+from registry import ObjectRegistry
 
 import math
 import os
@@ -43,6 +44,7 @@ class FileContainer(object):
 		self.hash = make_file_hash(self.file_path)
 		self.time = None
 		self.marked = False
+		ObjectRegistry.register(self)
 	
 	def destroy(self):
 		"""
@@ -62,7 +64,6 @@ class FileContainer(object):
 	
 	@staticmethod
 	def from_dict(data_dict):
-		Logger.debug(str(data_dict.keys()))
 		fc = FileContainer(data_dict["file_path"], data_dict["rel_path_base"])
 		fc.time = data_dict["time"]
 		fc.marked = data_dict["marked"]
@@ -78,6 +79,12 @@ class FileContainer(object):
 	
 	def __getitem__(self, key):
 		return getattr(self, key)
+	
+	def __del__(self):
+		"""
+		Destructor. NOT AN EXCUSE TO CODE SLOPPILY
+		"""
+		self.destroy()
 	
 
 def underscore_to_camel_case (str):
@@ -102,7 +109,6 @@ def create_thumb(src_file, tags, target_path, size):
 		if str(img_orientation) in ROTATION_VALUES:
 			im = im.rotate(ROTATION_VALUES[str(img_orientation)])
 	im.thumbnail(size, Image.ANTIALIAS)
-	Logger.debug("target path: %s" % target_path)
 	im.save(target_path)
 
 
@@ -124,7 +130,6 @@ def get_time(fc, force_date_from_path = False, allow_date_from_path = True):
 		"msg": "no_date"
 	}
 	file_name = fc.file_path
-	Logger.debug("file name: %s" % file_name)
 	dir_name, file_name = os.path.split(file_name)
 	relpath = fc.rel_path
 	parts = relpath.split(os.sep)
@@ -216,9 +221,6 @@ class Paginator:
 		a = self.next_page if self.next_page != None else -1
 		b = self.prev_page if self.prev_page != None else -1
 		c = self.num_pages if self.num_pages != None else -1
-		Logger.debug("num_pages: %s, next_page: %s, next_page_url: %s, prev_page: %s, prev_page_url: %s" % (c, a, self.next_page_url, b, self.prev_page_url))
-		
-		Logger.debug("start: %d, end: %d" % (start, end))
 
 		return self.list[start:end]
 	
@@ -265,7 +267,6 @@ class Paginator:
 		"""
 		Builds a page url
 		"""
-		Logger.debug(self.env.get("PATH_INFO", "").lstrip("/"))
 		if page == None:
 			return None
 		return "%s/%s?page=%d" % (S.BASE_URL, self.env.get("PATH_INFO", "").lstrip("/"), page)
