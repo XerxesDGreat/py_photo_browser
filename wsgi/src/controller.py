@@ -171,19 +171,22 @@ class PhotoController(BaseController):
 		try:
 			id = int(id)
 			p = Photo.get_by_id(id)
-		except e:
-			Logger.warning("could not find photo for id %d" % id)
+		except Exception as e:
 			p = None
 
 		if p == None:
 			fc = util.FileContainer(os.path.join(S.IMPORT_DIR, id), S.IMPORT_DIR)
 			fc.time = util.get_time(fc)["time"]
 			p = Photo.from_file_container(fc)
-			if p == None:
-				return "404"
 
-		rel_thumb_path = p.get_or_create_thumb(size)
-		f = open(os.path.join(S.THUMBNAIL_DIR, rel_thumb_path))
+		if p == None:
+			Logger.warning("could not find photo for %s" % id)
+			image_path = S.BROKEN_IMG_PATH
+		else:
+			rel_thumb_path = p.get_or_create_thumb(size)
+			image_path = os.path.join(S.THUMBNAIL_DIR, rel_thumb_path)
+
+		f = open(image_path)
 		raw_image = f.read()
 		f.close()
 		return self.construct_response(raw_image, self._route_types.JPEG_CONTENT_TYPE)
@@ -410,7 +413,8 @@ class ImportController(BaseController):
 			if file_hash in delete_hashes: 
 				fc.marked = True
 			if "time_%s" % file_hash in post_args.keys():
-				fc.time = post_args["time_%s" % file_hash][0]
+				time_val = post_args["time_%s" % file_hash][0]
+				fc.time = None if time_val == "None" else time_val
 			session_data["file_listing"][file_hash]["file_data"] = fc.__dict__()
 			file_listing.append(fc)
 			if file_data["conflicts"] != None:
@@ -450,6 +454,7 @@ class ImportController(BaseController):
 			session_data = json.loads(handle.read())
 		import_dir = os.path.join(S.IMPORT_DIR, session_data["rel_dir"])
 		success_results = []
+		deleted_results = []
 		failed_results = []
 		for file_hash in session_data["file_listing"].keys():
 			file_data = session_data["file_listing"][file_hash]
@@ -462,24 +467,28 @@ class ImportController(BaseController):
 				if fc.marked:
 					to_remove = fc.file_path
 					fc.destroy()
-					Logger.debug("not importing %s because it is marked" % to_remove)
+					Logger.info("not importing %s because it is marked" % to_remove)
 					os.remove(to_remove)
 					result["to"] = "deleted"
+					result["id"] = None
+					deleted_results.append(result)
 				else:
 					p = Photo.from_file_container(fc)
 					p.move_file(src_dir=p.path, copy=False)
+					p.get_or_create_thumb(Photo.SMALL_THUMB_SIZE)
+					p.get_or_create_thumb(Photo.MEDIUM_THUMB_SIZE)
 					p.store()
+					result["id"] = p.id
 					result["to"] = p.rel_path
+					success_results.append(result)
 			except Exception, e:
 				result["error"] = str(e)
 				Logger.error("was not able to do something: %s" % str(e))
-			if "error" in result.keys():
 				failed_results.append(result)
-			else:
-				success_results.append(result)
 
 		success_results = sorted(success_results, key=itemgetter('filename'))
 		failed_results = sorted(failed_results, key=itemgetter("filename"))
+		deleted_results = sorted(deleted_results, key=itemgetter("filename"))
 		
 		# when all is done, clean up
 		Logger.debug("removing %s" % session_file_path)
@@ -493,6 +502,7 @@ class ImportController(BaseController):
 				{
 					"success_results": success_results,
 					"failed_results": failed_results,
+					"deleted_results": deleted_results,
 					"import_id": session_id
 				}
 			),

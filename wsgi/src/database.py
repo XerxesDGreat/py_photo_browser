@@ -138,10 +138,9 @@ class Database:
 		try:
 			results = Database._do_query(query, values, commit)
 
-		except MySQLdb.OperationalException as e:
-			if e.errno == 2006:
-				self._init(True)
-				Database._do_query(query, values, commit)
+		except MySQLdb.OperationalError as e:
+			self._init(True)
+			Database._do_query(query, values, commit)
 
 		except Exception as e:
 			Logger.error("database exception caught: %s" % str(e))

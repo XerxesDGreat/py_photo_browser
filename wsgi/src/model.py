@@ -314,7 +314,10 @@ class Photo(object):
 		"""
 		Creates a new photo record in the database and returns the new id
 		"""
-		image_date = time.strftime(DB.DB_DATE_FORMAT, created_struct)
+		if created_struct == None:
+			image_date = "0000-00-00 00:00:00"
+		else:
+			image_date = time.strftime(DB.DB_DATE_FORMAT, created_struct)
 		value_list = [
 			("filename", file_basename, "%s"),
 			("path", path, "%s"),
@@ -429,7 +432,7 @@ class Photo(object):
 		self.filename = new_filename
 		if self.file_container != None:
 			self.file_container.file_path = os.path.join(target_dir, new_filename)
-			self.file_container.handle = open(self.file_container.file_path)
+			self.file_container.file_handle = open(self.file_container.file_path)
 	
 	def set_dirty(self):
 		"""
@@ -444,7 +447,10 @@ class Photo(object):
 		db record if necessary
 		"""
 		if self.new:
-			time_struct = time.strptime(self.image_date, DB.DB_DATE_FORMAT)
+			if self.image_date == None:
+				time_struct = None
+			else:
+				time_struct = time.strptime(self.image_date, DB.DB_DATE_FORMAT)
 			photo = Photo.create(self.filename, self.path, self.hash, time_struct)
 			self._values_from_photo_object(photo, False)
 			del(photo)

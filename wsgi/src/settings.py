@@ -95,6 +95,8 @@ class _Settings:
 		self._config["DEFAULT_PER_PAGE"] = 20
 
 		self._config["SITE_NAME"] = "Photo Browser"
+
+		self._config["BROKEN_IMAGE_PATH"] = os.path.join(self._config["HTDOCS_IMAGE_DIR"], "link_broken.png")
 	
 	def _post_local_assignments(self):
 		"""
