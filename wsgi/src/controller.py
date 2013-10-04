@@ -3,6 +3,7 @@ from template import Template
 from settings import Settings as S
 from model import Photo
 from cgi import parse_qs, escape
+from operator import itemgetter
 
 import glob
 import json
@@ -13,6 +14,9 @@ import math
 import Image
 import base64
 import util
+import time
+import hashlib
+import jsonpickle
 
 class BaseController:
 	def __init__ (self, env, route_types):
@@ -40,7 +44,13 @@ class IndexController(BaseController):
 		return self.construct_response(Template.render("index.html"))
 
 class StatsController(BaseController):
+	"""
+	Controller for creating a report of usage and count statistics
+	"""
 	def default(self):
+		"""
+		Default action fetches all the stats and renders a template using them
+		"""
 		stats = {}
 
 		# get all the thumbnails
@@ -65,10 +75,12 @@ class StatsController(BaseController):
 			("Disk space", total_size, "bytes")
 		])
 
-		Logger.debug(str(stats.keys()))
 		return self.construct_response(Template.render("stats.html", {"stats": stats}))
 	
 	def _thumb_info(self, size):
+		"""
+		Fetches information about a particular size of thumbnails
+		"""
 		ret = []
 		size_string = "%sx%s" % size
 		globbed_thumbs = glob.glob(os.path.join(S.THUMBNAIL_DIR, size_string, "*"))
@@ -83,6 +95,10 @@ class StatsController(BaseController):
 		
 
 class PhotoController(BaseController):
+	"""
+	Controller for fetching, assembling, and causing to be rendered requests
+	which have to do with displaying and updating photos
+	"""
 	def get_dirs_from_date(self):
 		"""
 		Renders a list of all the year "folders" in the system.
@@ -95,10 +111,8 @@ class PhotoController(BaseController):
 		path = os.path.relpath(path, "photos")
 		Logger.debug(path)
 		path_parts = path.split(os.sep)
-		Logger.debug(path_parts)
 		if len(path_parts) == 1 and path_parts[0] == ".":
 			path_parts = []
-		Logger.debug(path_parts)
 
 		year = None if len(path_parts) < 1 else path_parts[0]
 		month = None if len(path_parts) < 2 else path_parts[1]
@@ -111,7 +125,6 @@ class PhotoController(BaseController):
 			"year": year,
 			"month": month
 		}
-		Logger.debug(list)
 		return self.construct_response(Template.render("photos/dirs.html", tokens))
 	
 	def get_photos_from_date(self):
@@ -130,12 +143,9 @@ class PhotoController(BaseController):
 		num_photos = Photo.get_count_by_date(year=year, month=month, day=day)
 		start_index = (offset * limit) + 1
 		end_index = min(((offset + 1) * limit), num_photos)
-		Logger.debug("num_photos: %d, start_index: %d, end_index: %d" % (num_photos, start_index, end_index))
 
 		photos = Photo.get_by_date(year=year, month=month, day=day, limit=limit,
 			offset=(offset * limit))
-		Logger.debug("first: %d, last: %d" % (photos[0].id, photos[-1].id))
-		Logger.debug("num_photos_fetched: %d" % len(photos))
 		tokens = {
 			"photos": photos,
 			"offset": offset,
@@ -146,18 +156,37 @@ class PhotoController(BaseController):
 		}
 		return self.construct_response(Template.render("photos/list.html", tokens))
 	
+	def get_small_image(self):
+		return self._get_image(Photo.SMALL_THUMB_SIZE, "small")
+	
 	def get_large_image(self):
+		return self._get_image(Photo.MEDIUM_THUMB_SIZE, "big")
+	
+	def _get_image(self, size, action):
 		"""
 		Fetches the large image for lightboxing for the given photo id. Returns
 		the image raw data.
 		"""
-		id = self._get_id_from_path("big")
-		p = Photo.get_by_id(id)
+		id = self._get_id_from_path(action)
+		try:
+			id = int(id)
+			p = Photo.get_by_id(id)
+		except Exception as e:
+			p = None
+
 		if p == None:
-			return "404"
-		rel_thumb_path = p.get_or_create_thumb(Photo.MEDIUM_THUMB_SIZE)
-		f = open(os.path.join(S.THUMBNAIL_DIR, rel_thumb_path))
-		Logger.debug(rel_thumb_path)
+			fc = util.FileContainer(os.path.join(S.IMPORT_DIR, id), S.IMPORT_DIR)
+			fc.time = util.get_time(fc)["time"]
+			p = Photo.from_file_container(fc)
+
+		if p == None:
+			Logger.warning("could not find photo for %s" % id)
+			image_path = S.BROKEN_IMG_PATH
+		else:
+			rel_thumb_path = p.get_or_create_thumb(size)
+			image_path = os.path.join(S.THUMBNAIL_DIR, rel_thumb_path)
+
+		f = open(image_path)
 		raw_image = f.read()
 		f.close()
 		return self.construct_response(raw_image, self._route_types.JPEG_CONTENT_TYPE)
@@ -208,7 +237,7 @@ class PhotoController(BaseController):
 		"""
 		post_args = parse_qs(self._env["wsgi.input"].read())
 		if "id" not in post_args:
-			Logger.debug("not in post args: %s" % str(post_args))
+			Logger.warning("not in post args: %s" % str(post_args))
 			return self.construct_response(json.dumps({
 				"success": False,
 				"error": "missing args",
@@ -219,7 +248,7 @@ class PhotoController(BaseController):
 		_, id = post_ids[0].split("_")
 		p = Photo.get_by_id(id)
 		if p == None:
-			Logger.debug("no photo retrieved")
+			Logger.warning("no photo retrieved")
 			return self.construct_response(json.dumps({
 				"success": False,
 				"error": "invalid_id",
@@ -235,7 +264,6 @@ class PhotoController(BaseController):
 					"id": id
 				}
 			}), self._route_types.JSON_CONTENT_TYPE)
-		Logger.debug(a)
 		return a
 	
 	def _get_id_from_path(self, command):
@@ -256,47 +284,242 @@ class PhotoController(BaseController):
 		if key in post:
 			return post[key]
 		return default
-	
-	def _get_path_links(self, path):
-		"""
-		Fetches a list of path links for the provided path.
 
-		This is currently hardcoded, which is not ideal.
+class ImportController(BaseController):
+	"""
+	Controller for handling import commands and logic
+	"""
+	def default(self):
 		"""
-		link_set = []
-		cur_link = os.path.join("/")
-		#rel_path = os.path.relpath(path, "photos")
-		path_parts = path.split("/")
-		for p in path_parts:
-			if p in ("", "."):
-				continue
-			cur_link = os.path.join(cur_link, p)
-			link_set.append((urllib.quote(cur_link), p))
-		return link_set
-	
-	def _get_photos_from_dir(self, path):
-		dir_info = []
-		p = None
-		for current_dir, dirs, files in os.walk(file_path):
-			for d in dirs:
-				dir_info.append({
-					"path": os.path.join(current_dir, d),
-					"friendly_name": d,
-					"url": "%s/%s" % (S.BASE_URL, os.path.join(path, d))
-				})
-			files.sort()
-			# optimization: alter the paginator to only construct objects for the
-			# items which end up on the indicated page, possibly by passing in
-			# a pointer to the constructor of Photo
+		Fetches a list of directories, files, or some combination thereof which
+		need to be imported. The specific path is assumed from the PATH_INFO
+		provided by self._env
+		"""
+		rel_import_dir = os.path.relpath(self._env.get("PATH_INFO", "").lstrip("/"), "import")
+		dir_to_show = os.path.join(S.IMPORT_DIR, rel_import_dir)
+		file_listing = []
+		dir_listing = []
+		get_details = True
+		total_files = 0
+		for base_dir, dirs, files in os.walk(dir_to_show):
+			if get_details:
+				for d in dirs:
+					dir_listing.append({
+						"rel_path": os.path.relpath(os.path.join(base_dir, d), S.IMPORT_DIR),
+						"friendly_name": d
+					})
+				dir_listing = sorted(dir_listing, key=itemgetter("friendly_name"))
 			for f in files:
 				if not util.is_image_file(f):
 					continue
-				all_file_info.append(Photo(os.path.join(current_dir, f)))
-			p = util.Paginator(self._env, all_file_info)
+				total_files += 1
+				if not get_details:
+					continue
+				fc = util.FileContainer(os.path.join(base_dir, f), base_dir)
+				time_resp = util.get_time(fc, allow_date_from_path=False)
+				if time_resp["time"] != None:
+					fc.time = time.strftime(util.EXIF_DATE_FORMAT, time_resp["time"])
+				file_listing.append(fc)
+			get_details = False
+
+		file_listing = sorted(file_listing, key=itemgetter('name'))
+
+		return self.construct_response(
+			Template.render("import/listing.html", {
+				"dirs": dir_listing,
+				"files": file_listing,
+				"total_files": total_files,
+				"current_dir": rel_import_dir
+			})
+			, self._route_types.HTML_CONTENT_TYPE
+		)
+	
+	def preview(self):
+		"""
+		Presents a preview of the files to be imported, giving the user an
+		opportunity to view and change dates for images, highlighting images
+		which may already be in the system, and the like.
+		"""
+		rel_import_dir = os.path.relpath(self._env.get("PATH_INFO", "").lstrip("/"), "import/preview")
+		import_dir = os.path.realpath(os.path.join(S.IMPORT_DIR, rel_import_dir))
+		file_listing = []
+		import_identifier = hashlib.sha1()
+		hashes = []
+		session_file_struct = {}
+		for base_dir, _, files in os.walk(import_dir):
+			for f in files:
+				if not util.is_image_file(f):
+					continue
+				fc = util.FileContainer(os.path.join(import_dir, f), S.IMPORT_DIR)
+				ts = util.get_time(fc, allow_date_from_path=False)
+				if ts["time"] != None:
+					fc.time = time.strftime("%Y-%m-%d %H:%M:%S", ts["time"])
+				hashes.append(fc.hash)
+				import_identifier.update(fc.hash)
+				file_listing.append(fc)
+				session_file_struct[fc.hash] = {
+					"file_data": fc.__dict__(),
+					"conflicts": None
+				}
 			break
-		return (dir_info, p)
+		file_listing = sorted(file_listing, key=itemgetter('name'))
+		conflicts = Photo.get_by_hash(hashes)
+
+		for conflict_hash in conflicts.keys():
+			conflicts_for_json = [c.id for c in conflicts[conflict_hash]]
+			session_file_struct[conflict_hash]["conflicts"] = conflicts_for_json
+			session_file_struct[conflict_hash]["file_data"]["marked"] = True
+			Logger.debug(session_file_struct)
+
+		session_id = import_identifier.hexdigest()
+		session_data = {
+			"file_listing": session_file_struct,
+			"rel_dir": rel_import_dir,
+			"session_id": session_id
+		}
+		with open(os.path.join("/tmp", "%s.txt" % session_id), "w+") as f:
+			f.write(json.dumps(session_data))
+
+		return self.construct_response(
+			Template.render(
+				"import/preview.html",
+				{
+					"files": file_listing,
+					"import_id": session_id,
+					"import_dir": rel_import_dir,
+					"conflicts": conflicts
+				}
+			),
+			self._route_types.HTML_CONTENT_TYPE
+		)
+
+	def update_and_confirm(self):
+		post_args = parse_qs(self._env["wsgi.input"].read())
+		if "import_id" not in post_args.keys():
+			raise Exception("need valid import_id")
+
+		session_data = None
+		session_id = post_args["import_id"][0]
+		session_file_path = os.path.join("/tmp", "%s.txt" % session_id)
+		with open(session_file_path, "r") as handle:
+			session_data = json.loads(handle.read())
+
+		delete_hashes = post_args["delete"] if "delete" in post_args.keys() else []
+		file_listing = []
+		conflicts = {}
+		for file_hash in session_data["file_listing"].keys():
+			file_data = session_data["file_listing"][file_hash]
+			fc = util.FileContainer.from_dict(file_data["file_data"])
+			if file_hash in delete_hashes: 
+				fc.marked = True
+			if "time_%s" % file_hash in post_args.keys():
+				time_val = post_args["time_%s" % file_hash][0]
+				fc.time = None if time_val == "None" else time_val
+			session_data["file_listing"][file_hash]["file_data"] = fc.__dict__()
+			file_listing.append(fc)
+			if file_data["conflicts"] != None:
+				conflicts[file_hash] = file_data["conflicts"]
+
+		file_listing = sorted(file_listing, key=itemgetter('name'))
+		
+		with open(session_file_path, "w+") as handle:
+			handle.write(json.dumps(session_data))
+
+		return self.construct_response(
+			Template.render(
+				"import/confirm.html",
+				{
+					"files": file_listing,
+					"import_id": session_id,
+					"import_dir": session_data["rel_dir"],
+					"conflicts": conflicts
+				}
+			),
+			self._route_types.HTML_CONTENT_TYPE
+		)
+
+	def execute_import(self):
+		"""
+		Performs the actual import, taking information from the session file and
+		applying the settings/whatever to the various images in the import dir
+		"""
+		post_args = parse_qs(self._env["wsgi.input"].read())
+		if "import_id" not in post_args.keys():
+			raise Exception("need valid import_id")
+
+		session_data = None
+		session_id = post_args["import_id"][0]
+		session_file_path = os.path.join("/tmp", "%s.txt" % session_id)
+		with open(session_file_path, "r") as handle:
+			session_data = json.loads(handle.read())
+		import_dir = os.path.join(S.IMPORT_DIR, session_data["rel_dir"])
+		success_results = []
+		deleted_results = []
+		failed_results = []
+		for file_hash in session_data["file_listing"].keys():
+			file_data = session_data["file_listing"][file_hash]
+			fc = util.FileContainer.from_dict(file_data["file_data"])
+			result = {
+				"filename": fc.name,
+				"from": fc.rel_path
+			}
+			try:
+				if fc.marked:
+					to_remove = fc.file_path
+					fc.destroy()
+					Logger.info("not importing %s because it is marked" % to_remove)
+					os.remove(to_remove)
+					result["to"] = "deleted"
+					result["id"] = None
+					deleted_results.append(result)
+				else:
+					p = Photo.from_file_container(fc)
+					p.move_file(src_dir=p.path, copy=False)
+					p.get_or_create_thumb(Photo.SMALL_THUMB_SIZE)
+					p.get_or_create_thumb(Photo.MEDIUM_THUMB_SIZE)
+					p.store()
+					result["id"] = p.id
+					result["to"] = p.rel_path
+					success_results.append(result)
+			except Exception, e:
+				result["error"] = str(e)
+				Logger.error("was not able to do something: %s" % str(e))
+				failed_results.append(result)
+
+		success_results = sorted(success_results, key=itemgetter('filename'))
+		failed_results = sorted(failed_results, key=itemgetter("filename"))
+		deleted_results = sorted(deleted_results, key=itemgetter("filename"))
+		
+		# when all is done, clean up
+		Logger.debug("removing %s" % session_file_path)
+		os.remove(session_file_path)
+		if len(os.listdir(import_dir)) == 0:
+			os.rmdir(import_dir)
+
+		return self.construct_response(
+			Template.render(
+				"import/execute.html",
+				{
+					"success_results": success_results,
+					"failed_results": failed_results,
+					"deleted_results": deleted_results,
+					"import_id": session_id
+				}
+			),
+			self._route_types.HTML_CONTENT_TYPE
+		)
+	
+	def get_progress(self):
+		pass
 	
 class CssController(BaseController):
+	"""
+	Controller for rendering css templates since I want to be able to use tokens
+	in the css documents
+	"""
 	def default(self):
+		"""
+		Performs all rendering actions
+		"""
 		path = os.path.join("css",os.path.relpath(self._env.get("PATH_INFO"), "css"))
 		return self.construct_response(Template.render(path), self._route_types.CSS_CONTENT_TYPE)

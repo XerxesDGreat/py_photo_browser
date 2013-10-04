@@ -16,12 +16,9 @@ class Router:
 
 	def route (self):
 		response = None
-		Logger.debug("path: %s" % self._path)
 		for regex, callback in S.ROUTES:
-			Logger.debug("route regex: %s" % regex)
 			match = re.search(regex, self._path)
 			if match is not None:
-				Logger.debug("matched %s" % regex)
 				self._environ['myapp.url_args'] = match.groups()
 				response = self._success(callback)
 				break
@@ -78,7 +75,6 @@ class RouteResponse:
 		
 		lenHeader = ("Content-Length", str(len(self._content)))
 		self._headers.append(lenHeader)
-		Logger.debug("added another header")
 	
 	@staticmethod
 	def ok(content, headers):
@@ -97,9 +93,7 @@ class RouteResponse:
 	
 	def getContent (self):
 		for h in self._headers:
-			Logger.debug("Header in getContent: %s" % str(h))
 			if h[0] == "Content-type" and h[1] in RouteResponse.UTF_CONTENT_TYPES:
-				Logger.debug("getContent hello")
 				return self._content.encode("utf-8")
 		return self._content
 

@@ -42,3 +42,12 @@ Roadmap
 * Import script which will allow moving items from an import directory into
 directories based on the date (YYYY/MM/DD/&lt;filename&gt;)
 * Support for newly imported files to be surfaced until first seen
+
+Improvements
+------------
+
+* Add ability to specific target directory with checkbox to specify "use date"
+* Add links at top of import pages to go back to specific directories
+* Better support for Photo objects everywhere; get rid of FileContainer object
+* Or just do it better
+* Better cleanup of file objects

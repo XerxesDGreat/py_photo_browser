@@ -82,3 +82,8 @@ a {
 	font-weight: bold;
 	color: #006;
 }
+
+div.clearall {
+	height: 1px;
+	clear: both;
+}

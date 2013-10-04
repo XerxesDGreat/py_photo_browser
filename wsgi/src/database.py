@@ -1,6 +1,8 @@
 from settings import Settings as S
-import MySQLdb
 from logger import Logger
+
+import MySQLdb
+import time
 
 class Database:
 	DB_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -8,8 +10,8 @@ class Database:
 	_cursor = None
 
 	@staticmethod
-	def _init():
-		if (Database._cursor != None and Database._db != None):
+	def _init(force=False):
+		if Database._cursor != None and Database._db != None and not force:
 			return
 
 		cfg = S.DATABASE
@@ -45,7 +47,7 @@ class Database:
 			limit_stmt,
 			offset_stmt
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
 	
 	@staticmethod
 	def _assert_valid_args(args):
@@ -83,7 +85,13 @@ class Database:
 			table_name,
 			where_stmt
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
+	
+	@staticmethod
+	def fetch_max_id(table_name):
+		field = FieldArg("id", None, None, FieldArg.DB_OP_MAX)
+		result_set = Database.fetch(table_name, [field])
+		return result_set[0][0]
 
 	@staticmethod
 	def update (table_name, values_to_update, id_values):
@@ -93,7 +101,7 @@ class Database:
 			", ".join([v.get_query_string() for v in values_to_update]),
 			" AND ".join([a.get_query_string() for a in id_values])
 		)
-		return Database._do_query(query)
+		return Database._do_query_wrapper(query)
 	
 	@staticmethod
 	def update_by_id(table_name, id, values_to_update):
@@ -103,7 +111,6 @@ class Database:
 	@staticmethod
 	def create (table_name, data_list):
 		Database._init()
-		#query = 'INSERT INTO `' + table_name + '` SET '
 		value_list = []
 		field_list = []
 		repl_type_list = []
@@ -117,30 +124,41 @@ class Database:
 			", ".join(repl_type_list)
 		)
 		value_tuple = tuple(value_list)
-		Logger.debug(query)
-		resp = Database._do_query(query, value_tuple)
+		resp = Database._do_query_wrapper(query, value_tuple)
 		return Database._cursor.lastrowid
+	
+	@staticmethod
+	def fetch_current_timestamp():
+		return time.strftime(Database.DB_DATE_FORMAT)
 
 	@staticmethod
-	def _do_query(query, values = None, commit = True):
-		Logger.debug("Executing query: %s" % query)
+	def _do_query_wrapper(query, values = None, commit = True):
+		Logger.info("Executing query: %s" % query)
 		results = []
 		try:
-			Database._cursor.execute(query, values)
-			if commit:
-				Database._db.commit()
-			results = Database._cursor.fetchall()
+			results = Database._do_query(query, values, commit)
 
-		except Exception, e:
-			Logger.debug("database exception caught: %s" % str(e))
-			Logger.debug("query: %s, values: %s, commit: %s" % (
+		except MySQLdb.OperationalError as e:
+			self._init(True)
+			Database._do_query(query, values, commit)
+
+		except Exception as e:
+			Logger.error("database exception caught: %s" % str(e))
+			Logger.info("query: %s, values: %s, commit: %s" % (
 				str(query),str(values), str(commit)))
-			Logger.error('some exception caught')
 			Database._db.rollback()
 
 		return results
 
-class FieldArg():
+	@staticmethod
+	def _do_query(query, values = None, commit = True):
+		Database._cursor.execute(query, values)
+		if commit:
+			Database._db.commit()
+		results = Database._cursor.fetchall()
+		return results
+
+class FieldArg(object):
 	CMP_LT = "<"
 	CMP_GT = ">"
 	CMP_LTE = "<="
@@ -149,11 +167,14 @@ class FieldArg():
 	CMP_NE = "<>"
 	CMP_BETWEEN = "BETWEEN"
 	CMP_IN = "IN"
+	CMP_NOT_IN = "NOT IN"
 
 	DB_OP_YEAR = "YEAR"
 	DB_OP_MONTH = "MONTH"
 	DB_OP_DAY = "DAY"
 	DB_OP_COUNT = "COUNT"
+	DB_OP_MIN = "MIN"
+	DB_OP_MAX = "MAX"
 
 	def __init__(self, field, compare_operation = None, compare_value = None, db_op = None):
 		self._field = field
@@ -170,6 +191,12 @@ class FieldArg():
 				field_str,
 				self._compare_value[0],
 				self._compare_value[1]
+			)
+		elif self._compare_operation in [FieldArg.CMP_IN, FieldArg.CMP_NOT_IN]:
+			str = "%s %s ('%s')" % (
+				field_str,
+				self._compare_operation,
+				"', '".join(self._compare_value)
 			)
 		elif self._compare_operation != None:
 			str = "%s %s '%s'" % (
