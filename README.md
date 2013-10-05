@@ -34,13 +34,13 @@ Changeset
 * v0.0.0 Initial commit; functional web app
 * v0.0.1 Add in Lightbox and dynamic creation of large thumbnails
 * v0.1.0 Use database backend rather than file system backend
+* v0.2.0 Add import section to allow browser-based importing of photos to the
+database and file system
 
 Roadmap
 -------
 
 * Album creation
-* Import script which will allow moving items from an import directory into
-directories based on the date (YYYY/MM/DD/&lt;filename&gt;)
 * Support for newly imported files to be surfaced until first seen
 
 Improvements
