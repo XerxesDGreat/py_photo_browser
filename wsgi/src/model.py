@@ -42,9 +42,10 @@ class Photo(object):
 	GUARD = {}
 
 	############################################################################
-	# PROPERTY METHODS
+	# PROPERTIES
 	############################################################################
 	def __getattr__(self, name):
+		"""Generic getter"""
 		try:
 			property_name = "_%s" % name
 			return getattr(self, property_name)
@@ -52,9 +53,11 @@ class Photo(object):
 			return None
 	
 	def __setattr__(self, name, value):
+		"""Generic setter"""
 		self._set_internal(name, value)
 	
 	def _set_internal(self, name, value, bypass_checks=False, set_dirty=True):
+		"""Setter
 		if bypass_checks and name in Photo.UPDATE_BLACKLIST:
 			raise Exception("cannot update field %s externally" % name)
 		property_name = "_%s" % name
@@ -64,18 +67,26 @@ class Photo(object):
 
 	@property
 	def thumb_url(self):
+		"""
+		Getter for the thumbnail url
+		"""
 		return self.get_or_create_thumb()
 	
 	@property
 	def rel_path(self):
-		return os.path.relpath(self.filepath, S.BASE_FS_PATH)
+		"""
+		Getter for the relative path to this file, based on the files base path
+		"""
+		return os.path.relpath(self.filepath, self.base_path)
 
 	@property
 	def filepath(self):
+		"""Return full filepath"""
 		return os.path.join(self.path, self.filename)
 
 	@property
 	def tags(self):
+		"""Return set of EXIF tags"""
 		if self._tags == None:
 			if self.file_container != None:
 				self._tags = self.file_container.tags
@@ -85,10 +96,12 @@ class Photo(object):
 	
 	@tags.setter
 	def tags(self, value):
+		"""Set the tags for this photo"""
 		self._tags = value
 
 	@property
 	def handle(self):
+		"""Return file object"""
 		if self._handle == None:
 			if self.file_container != None:
 				self._handle = self.file_container.file_handle
@@ -98,6 +111,7 @@ class Photo(object):
 	
 	@handle.setter
 	def handle(self, value):
+		"""Set file handle """
 		self._handle = value
 
 	############################################################################
@@ -254,14 +268,15 @@ class Photo(object):
 			kwargs["hash"] if "hash" in kwargs.keys() else None,
 			kwargs["marked"] if "marked" in kwargs.keys() else False
 		)
-		return Photo(Photo.GUARD, data_tuple, True)
+		base_path = kwargs["base_path"] if "base_path" in kwargs else S.IMPORT_DIR
+		return Photo(Photo.GUARD, data_tuple, new=True, base_path=base_path)
 	
 	@staticmethod
-	def from_file_container(fc):
+	def from_file_path(file_path, rel_dir=S.BASE_FS_DIR):
 		"""
 		Creates a photo object from the provided FileContainer object
 		"""
-		fpath, fname = os.path.split(fc.file_path)
+		fpath, fname = os.path.split(file_path)
 		next_id = Photo.get_next_id()
 		now = DB.fetch_current_timestamp()
 		data_tuple = (
@@ -270,12 +285,11 @@ class Photo(object):
 			fpath,
 			now,
 			now,
-			fc.time,	
-			fc.hash,
+			None,
+			None,
 			False
 		)
-		p = Photo(Photo.GUARD, data_tuple, True)
-		p.file_container = fc
+		p = Photo(Photo.GUARD, data_tuple, True, rel_dir)
 		return p
 
 	@staticmethod
@@ -288,13 +302,6 @@ class Photo(object):
 		Photo.NEXT_AVAILABLE_ID += 1
 		retval = Photo.NEXT_AVAILABLE_ID
 		return Photo.NEXT_AVAILABLE_ID
-
-	@staticmethod
-	def get_by_path(path):
-		"""
-		Fetches a list of photos from the given path, paginated as indicated
-		"""
-		full_path = os.path.join(S.BASE_FS_PATH, path)
 	
 	############################################################################
 	# CREATION METHODS
@@ -330,17 +337,17 @@ class Photo(object):
 	############################################################################
 	# INSTANCE METHODS
 	############################################################################
-	def __init__(self, guard, db_row, new = False):
+	def __init__(self, guard, db_row, new = False, base_path=S.BASE_FS_PATH):
 		"""
-		Constructor; uses a guard to ensure noone else uses it
+		Constructor; uses a guard to ensure noone else uses it.
 		"""
 		if guard != Photo.GUARD:
 			raise Exception("Must only call __init__ from the accessor methods in Photo")
 		self._id, self._filename, self._path, self._added, self._modified, self._image_date, self._hash, self._marked = db_row
-		self.new = new
 		self._tags = None
 		self._handle = None
-		self.file_container = None
+		self.new = new
+		self.base_path = base_path
 		ObjectRegistry.register(self)
 	
 	def get_thumb_image_name(self):

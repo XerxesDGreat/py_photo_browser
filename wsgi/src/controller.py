@@ -157,9 +157,11 @@ class PhotoController(BaseController):
 		return self.construct_response(Template.render("photos/list.html", tokens))
 	
 	def get_small_image(self):
+		"""Get small thumbnail image"""
 		return self._get_image(Photo.SMALL_THUMB_SIZE, "small")
 	
 	def get_large_image(self):
+		"""Get large thumbnail image"""
 		return self._get_image(Photo.MEDIUM_THUMB_SIZE, "big")
 	
 	def _get_image(self, size, action):
@@ -174,6 +176,7 @@ class PhotoController(BaseController):
 		except Exception as e:
 			p = None
 
+		# if we don't have a photo, create one
 		if p == None:
 			fc = util.FileContainer(os.path.join(S.IMPORT_DIR, id), S.IMPORT_DIR)
 			fc.time = util.get_time(fc)["time"]
@@ -192,17 +195,13 @@ class PhotoController(BaseController):
 		return self.construct_response(raw_image, self._route_types.JPEG_CONTENT_TYPE)
 	
 	def get_one(self):
-		"""
-		Fetches and returns raw data for a single photo
-		"""
+		"""Fetches and returns raw data for a single photo"""
 		self._get_id_from_path("single")
 		a = Photo.get_by_id(id)
 		return self.construct_response()
 		
 	def get_marked_photos(self):
-		"""
-		Renders a list of marked files
-		"""
+		"""Renders a list of marked files"""
 		offset = self._get_from_query("page", 1) - 1
 		limit = self._get_from_query("limit", S.DEFAULT_PER_PAGE)
 		photos = Photo.get_marked()
